@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "60c878a56c9ed0b4c22a532a73675f2392e7fef9fe1f95751b3c4957a3fcf741"
+            "sha256": "72ac91e9c272d9f0830024977535442eea7e1478249a2b201b0f9260b8ea4471"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -29,6 +29,7 @@
                 "sha256:14ab8371f883c47348e749c4d8773366dd2cc549038e9eaabe21fb1d05bca7b5",
                 "sha256:b76a264c0781e4f19138617e4201e8e67fa6dd331db32f4b6273fc18a433f4ec"
             ],
+            "index": "pypi",
             "version": "==1.12.213"
         },
         "docutils": {
@@ -53,6 +54,13 @@
             ],
             "index": "pypi",
             "version": "==1.4.6"
+        },
+        "logstash-formatter": {
+            "hashes": [
+                "sha256:163f5ef62df5459f1d36dcb54e9c3f8f0c90157a324a3361887532b615bf4fb9"
+            ],
+            "index": "pypi",
+            "version": "==0.5.17"
         },
         "python-dateutil": {
             "hashes": [
@@ -83,6 +91,14 @@
             ],
             "markers": "python_version >= '3.4'",
             "version": "==1.25.3"
+        },
+        "watchtower": {
+            "hashes": [
+                "sha256:71959c065026c5da93adb0a9043872165fa6be487a76fecbb67a3670a5c11aa5",
+                "sha256:e205f1752a925994c53895e06150c44235abab4a623412b5e5372b07a3d38b9a"
+            ],
+            "index": "pypi",
+            "version": "==0.6.0"
         }
     },
     "develop": {

@@ -9,6 +9,9 @@ flake8 = "*"
 [packages]
 kafka-python = "*"
 boto3 = "*"
+watchtower = "*"
+logstash-formatter = "*"
+botocore = "*"
 
 [requires]
 python_version = "3.7"

@@ -4,7 +4,7 @@ from mq import consume
 from storage import aws
 from utils import broker_logging, config
 
-from botocore.execeptions import ClientError
+from botocore.exceptions import ClientError
 
 
 logger = broker_logging.initialize_logging()
