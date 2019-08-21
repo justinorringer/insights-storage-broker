@@ -1,0 +1,13 @@
+@startuml Insights Storage Broker
+participant validating_service
+entity platform_ingress_reject
+participant storage_broker
+database stage_bucket
+database reject_bucket
+validating_service->platform_ingress_reject: failure message
+Note right of validating_service: {"request_id": "abcd-1234",\n"validation": "failure"}
+platform_ingress_reject->storage_broker: failure message
+storage_broker->stage_bucket: copy command
+Note right of stage_bucket: "Moves payload to reject bucket"
+stage_bucket->reject_bucket: payload copy
+@enduml
