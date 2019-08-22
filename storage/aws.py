@@ -10,6 +10,7 @@ s3 = boto3.client("s3",
                   aws_access_key_id=config.AWS_ACCESS_KEY_ID,
                   aws_secret_access_key=config.AWS_SECRET_ACCESS_KEY)
 
+
 def copy(key):
     copy_src = {"Bucket": config.STAGE_BUCKET,
                 "Key": key}
