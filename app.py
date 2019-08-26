@@ -36,6 +36,7 @@ def main():
 def handle_message(msg):
     if msg.get("validation") == "success":
         send_message(config.ANNOUNCER_TOPIC, msg)
+        logger.debug("Sent success message to %s", config.ANNOUNCER_TOPIC)
     elif msg.get("validation") == "failure":
         try:
             aws.copy(msg.get("request_id"))
