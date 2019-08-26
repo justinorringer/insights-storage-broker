@@ -35,7 +35,7 @@ def main():
 
 def handle_message(msg):
     if msg.get("validation") == "success":
-        send_message(config.ACCOUNCER_TOPIC, msg)
+        send_message(config.ANNOUNCER_TOPIC, msg)
     elif msg.get("validation") == "failure":
         try:
             aws.copy(msg.get("request_id"))
