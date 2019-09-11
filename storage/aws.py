@@ -27,6 +27,7 @@ def get_url(key):
                                              Params={'Bucket': config.STAGE_BUCKET,
                                                      'Key': key},
                                              ExpiresIn=86400)
+        logger.debug(response)
     except ClientError as e:
         logger.error("Failed to get url for %s", key)
         return None
