@@ -34,6 +34,7 @@ def main():
 
 
 def handle_message(msg):
+    logger.debug("Message Contents: %s", msg)
     if msg.get("validation") == "success":
         if msg.get("url") is None:
             url = aws.get_url(msg.get("request_id"))
