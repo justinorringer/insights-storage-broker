@@ -34,8 +34,8 @@ GROUP_ID = os.getenv("GROUP_ID", APP_NAME)
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", None)
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", None)
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
-STAGE_BUCKET = os.getenv("STAGE_BUCKET", "insights-upload-perm-test")
-REJECT_BUCKET = os.getenv("REJECT_BUCKET", "insights-upload-rejected")
+STAGE_BUCKET = os.getenv("STAGE_BUCKET", "insights-dev-upload-perm")
+REJECT_BUCKET = os.getenv("REJECT_BUCKET", "insights-dev-upload-rejected")
 S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL", None)
 
 # Logging
