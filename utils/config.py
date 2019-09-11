@@ -39,8 +39,8 @@ REJECT_BUCKET = os.getenv("REJECT_BUCKET", "insights-upload-rejected")
 S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL", None)
 
 # Logging
-CW_ACCESS_KEY_ID = os.getenv("CW_ACCESS_KEY_ID", None)
-CW_SECRET_ACCESS_KEY = os.getenv("CW_SECRET_ACCESS_KEY", None)
+CW_ACCESS_KEY_ID = os.getenv("CW_AWS_ACCESS_KEY_ID", None)
+CW_SECRET_ACCESS_KEY = os.getenv("CW_AWS_SECRET_ACCESS_KEY", None)
 LOG_GROUP = os.getenv("LOG_GROUP", "platform-dev")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 NAMESPACE = get_namespace()
