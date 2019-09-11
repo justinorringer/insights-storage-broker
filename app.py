@@ -36,14 +36,14 @@ def main():
 def handle_message(msg):
     if msg.get("validation") == "success":
         send_message(config.ANNOUNCER_TOPIC, msg)
-        logger.debug("Sent success message to %s", config.ANNOUNCER_TOPIC)
+        logger.info("Sent success message to %s for request %s", config.ANNOUNCER_TOPIC, msg.get("request_id"))
     elif msg.get("validation") == "failure":
         try:
             aws.copy(msg.get("request_id"))
         except ClientError:
             logger.exception("Unable to move %s to rejected bucket", msg.get("request_id"))
     else:
-        logger.error("Validation key not found or incorrect: %s", msg.get("validation"))
+        logger.error("Validation key not found or incorrect for %s: [%s]", msg.get("request_id"), msg.get("validation"))
 
 
 def send_message(topic, msg):
