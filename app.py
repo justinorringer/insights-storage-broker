@@ -35,6 +35,10 @@ def main():
 
 def handle_message(msg):
     if msg.get("validation") == "success":
+        if msg.get("url") is None:
+            url = aws.get_url(msg.get("request_id"))
+            if url:
+                msg["url"] = url
         send_message(config.ANNOUNCER_TOPIC, msg)
         logger.info("Sent success message to %s for request %s", config.ANNOUNCER_TOPIC, msg.get("request_id"))
     elif msg.get("validation") == "failure":

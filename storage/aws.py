@@ -1,5 +1,6 @@
 import logging
 import boto3
+from botocore.exceptions import ClientError
 
 from utils import config
 
@@ -18,3 +19,16 @@ def copy(key):
     s3.copy(copy_src, config.REJECT_BUCKET, key)
     s3.delete_object(Bucket=config.STAGE_BUCKET, Key=key)
     logger.info("Request ID [%s] moved to [%s]", key, config.REJECT_BUCKET)
+
+
+def get_url(key):
+    try:
+        response = s3.generate_presigned_url('get_object',
+                                             Params={'Bucket': config.STAGE_BUCKET,
+                                                     'Key': key},
+                                             ExpiresIn=86400)
+    except ClientError as e:
+        logger.error("Failed to get url for %s", key)
+        return None
+
+    return response
