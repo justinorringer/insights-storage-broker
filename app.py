@@ -1,6 +1,6 @@
 import traceback
 
-from mq import consume, produce
+from mq import consume, produce, msgs
 from storage import aws
 from utils import broker_logging, config
 
@@ -35,16 +35,22 @@ def main():
 
 def handle_message(msg):
     logger.debug("Message Contents: %s", msg)
+    tracker_msg = msgs.create_msg(msg, "received", "received validation response")
+    send_message(config.TRACKER_TOPIC, tracker_msg)
     if msg.get("validation") == "success":
         if msg.get("url") is None:
             url = aws.get_url(msg.get("request_id"))
             if url:
                 msg["url"] = url
         send_message(config.ANNOUNCER_TOPIC, msg)
+        tracker_msg = msgs.create_msg(msg, "success", "sent message to available topic")
+        send_message(config.TRACKER_TOPIC, tracker_msg)
         logger.info("Sent success message to %s for request %s", config.ANNOUNCER_TOPIC, msg.get("request_id"))
     elif msg.get("validation") == "failure":
         try:
             aws.copy(msg.get("request_id"))
+            tracker_msg = msgs.create_msg(msg, "success", "copied rejected payload to rejected bucket")
+            send_message(config.TRACKER_TOPIC, tracker_msg)
         except ClientError:
             logger.exception("Unable to move %s to rejected bucket", msg.get("request_id"))
     else:
