@@ -28,7 +28,7 @@ def get_url(key):
                                                      'Key': key},
                                              ExpiresIn=86400)
         logger.debug(response)
-    except ClientError as e:
+    except ClientError:
         logger.error("Failed to get url for %s", key)
         return None
 
