@@ -39,5 +39,8 @@ def initialize_logging():
 
     if (config.CW_AWS_ACCESS_KEY_ID and config.CW_AWS_SECRET_ACCESS_KEY):
         config_cloudwatch(logger)
+        logger.info("Cloudwatch Logging Enabled")
+    else:
+        logger.info("Cloudwatch Logging Disabled")
 
     return logger
