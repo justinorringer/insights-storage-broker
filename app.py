@@ -1,4 +1,5 @@
 import traceback
+import requests
 
 from mq import consume, produce, msgs
 from storage import aws
@@ -42,6 +43,8 @@ def handle_message(msg):
             url = aws.get_url(msg.get("request_id"))
             if url:
                 msg["url"] = url
+        if msg.get("id") is None:
+            msg["id"] = get_inv_id(msg)
         send_message(config.ANNOUNCER_TOPIC, msg)
         tracker_msg = msgs.create_msg(msg, "success", "sent message to available topic")
         send_message(config.TRACKER_TOPIC, tracker_msg)
@@ -62,6 +65,20 @@ def send_message(topic, msg):
         producer.send(topic=topic, value=msg)
     except KafkaError:
         logger.exception("Unable to topic [%s] for request id [%s]", topic, msg.get("request_id"))
+
+
+def get_inv_id(msg):
+    headers = {"x-rh-identity": msg["b64_identity"]}
+    query_string = "?insights_id={}".format(msg.get("insights_id"))
+    r = requests.get(config.INVENTORY_URL + query_string, headers=headers).json()
+    try:
+        result = r["results"][0]["id"]
+        logger.debug("Got inventory ID successfully for [%s] - [%s]", msg.get("request_id"), result)
+    except (KeyError, IndexError):
+        logger.error("unable to get inventory ID for request: %s", msg["request_id"])
+        result = None
+
+    return result
 
 
 if __name__ == "__main__":

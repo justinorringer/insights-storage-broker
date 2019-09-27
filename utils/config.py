@@ -24,6 +24,9 @@ def get_namespace():
         logger.info("Not running in openshift")
 
 
+# Inventory
+INVENTORY_URL = os.getenv("INVENTORY_URL", "http://insights-inventory:8080/api/inventory/v1/hosts")
+
 # Kafka
 CONSUME_TOPIC = os.getenv("CONSUME_TOPIC", "platform.upload.validation")
 ANNOUNCER_TOPIC = os.getenv("ANNOUNCER_TOPIC", "platform.upload.available")
