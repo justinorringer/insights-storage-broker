@@ -35,7 +35,6 @@ def main():
 
 
 def handle_message(msg):
-    logger.debug("Message Contents: %s", msg)
     tracker_msg = msgs.create_msg(msg, "received", "received validation response")
     send_message(config.TRACKER_TOPIC, tracker_msg)
     if msg.get("validation") == "success":
@@ -45,6 +44,7 @@ def handle_message(msg):
                 msg["url"] = url
         if msg.get("id") is None:
             msg["id"] = get_inv_id(msg)
+        logger.debug("Message Contents: %s", msg)
         send_message(config.ANNOUNCER_TOPIC, msg)
         tracker_msg = msgs.create_msg(msg, "success", "sent message to available topic")
         send_message(config.TRACKER_TOPIC, tracker_msg)
