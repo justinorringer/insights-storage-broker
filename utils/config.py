@@ -30,6 +30,7 @@ INVENTORY_URL = os.getenv("INVENTORY_URL", "http://insights-inventory:8080/api/i
 # Kafka
 CONSUME_TOPIC = os.getenv("CONSUME_TOPIC", "platform.upload.validation")
 ANNOUNCER_TOPIC = os.getenv("ANNOUNCER_TOPIC", "platform.upload.available")
+EGRESS_TOPIC = os.getenv("EGRESS_TOPIC", "platform.inventory.host-egress")
 TRACKER_TOPIC = os.getenv("TRACKER_TOPIC", "platform.payload-status")
 BOOTSTRAP_SERVERS = os.getenv("BOOTSTRAP_SERVERS", "kafka:29092").split()
 GROUP_ID = os.getenv("GROUP_ID", APP_NAME)
