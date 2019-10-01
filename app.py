@@ -44,6 +44,7 @@ def produce_available(msg):
     tracker_msg = msgs.create_msg(msg, "received", "received egress message")
     send_message(config.TRACKER_TOPIC, tracker_msg)
     platform_metadata = msg.pop("platform_metadata")
+    msg["id"] = msg["host"].get("id")
     available_message = {**msg, **platform_metadata}
     logger.debug("Outgoing Egress Message Contents: %s", available_message)
     send_message(config.ANNOUNCER_TOPIC, available_message)
