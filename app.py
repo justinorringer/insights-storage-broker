@@ -54,11 +54,11 @@ def produce_available(msg):
 
 
 def check_validation(msg):
-    tracker_msg = msgs.create_msg(msg, "received", "received validation response")
-    send_message(config.TRACKER_TOPIC, tracker_msg)
     if msg.get("validation") == "success":
         logger.info("Validation success for [%s]", msg.get("request_id"))
     elif msg.get("validation") == "failure":
+        tracker_msg = msgs.create_msg(msg, "received", "received validation response")
+        send_message(config.TRACKER_TOPIC, tracker_msg)
         try:
             aws.copy(msg.get("request_id"))
             tracker_msg = msgs.create_msg(msg, "success", "copied failed payload to reject bucket")
