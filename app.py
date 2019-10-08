@@ -46,9 +46,8 @@ def produce_available(msg):
     available_message = {**msg, **platform_metadata}
     tracker_msg = msgs.create_msg(available_message, "received", "received egress message")
     send_message(config.TRACKER_TOPIC, tracker_msg)
-    logger.debug("Outgoing Egress Message Contents: %s", available_message)
     send_message(config.ANNOUNCER_TOPIC, available_message)
-    tracker_msg = msgs.create_msg(msg, "success", "sent message to platform.upload.available")
+    tracker_msg = msgs.create_msg(available_message, "success", "sent message to platform.upload.available")
     send_message(config.TRACKER_TOPIC, tracker_msg)
     logger.info("Sent success message to %s for request %s", config.ANNOUNCER_TOPIC, available_message.get("request_id"))
 
@@ -72,6 +71,7 @@ def check_validation(msg):
 def send_message(topic, msg):
     try:
         producer.send(topic=topic, value=msg)
+        logger.debug("Message contents for %s: %s", topic, msg)
         logger.info("Sent message to %s for request_id %s", topic, msg.get("request_id"))
     except KafkaError:
         logger.exception("Unable to topic [%s] for request id [%s]", topic, msg.get("request_id"))
