@@ -72,6 +72,7 @@ def check_validation(msg):
 def send_message(topic, msg):
     try:
         producer.send(topic=topic, value=msg)
+        logger.info("Sent message to %s for request_id %s", topic, msg.get("request_id"))
     except KafkaError:
         logger.exception("Unable to topic [%s] for request id [%s]", topic, msg.get("request_id"))
 
