@@ -9,7 +9,6 @@ def create_msg(data, status, status_msg):
     msg = {"service": "insights-storage-broker",
            "account": data.get("account"),
            "request_id": data.get("request_id"),
-           "payload_id": data.get("request_id"),
            "inventory_id": data.get("id"),
            "status": status,
            "status_msg": status_msg,
