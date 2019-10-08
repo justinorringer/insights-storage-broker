@@ -41,11 +41,11 @@ def main():
 # platform.upload.available queue
 def produce_available(msg):
     logger.debug("Incoming Egress Message Content: %s", msg)
-    tracker_msg = msgs.create_msg(msg, "received", "received egress message")
-    send_message(config.TRACKER_TOPIC, tracker_msg)
     platform_metadata = msg.pop("platform_metadata")
     msg["id"] = msg["host"].get("id")
     available_message = {**msg, **platform_metadata}
+    tracker_msg = msgs.create_msg(available_message, "received", "received egress message")
+    send_message(config.TRACKER_TOPIC, tracker_msg)
     logger.debug("Outgoing Egress Message Contents: %s", available_message)
     send_message(config.ANNOUNCER_TOPIC, available_message)
     tracker_msg = msgs.create_msg(msg, "success", "sent message to platform.upload.available")
