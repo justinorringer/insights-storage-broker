@@ -54,6 +54,7 @@ def produce_available(msg):
 def check_validation(msg):
     if msg.get("validation") == "success":
         logger.info("Validation success for [%s]", msg.get("request_id"))
+        send_message(config.ANNOUNCER_TOPIC, msg)
     elif msg.get("validation") == "failure":
         tracker_msg = msgs.create_msg(msg, "received", "received validation response")
         send_message(config.TRACKER_TOPIC, tracker_msg)
