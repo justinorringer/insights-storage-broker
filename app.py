@@ -54,6 +54,10 @@ def produce_available(msg):
 
 def check_validation(msg):
     if msg.get("validation") == "success":
+        if msg.get("service") != "advisor":
+            send_message(config.ANNOUNCER_TOPIC, msg)
+            logger.info("Non Advisor message announced to platform")
+            logger.debug("Message contents: %s", msg)
         logger.info("Validation success for [%s]", msg.get("request_id"))
     elif msg.get("validation") == "failure":
         tracker_msg = msgs.create_msg(msg, "received", "received validation response")
