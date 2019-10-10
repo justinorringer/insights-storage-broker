@@ -1,5 +1,4 @@
 import traceback
-import requests
 
 from mq import consume, produce, msgs
 from storage import aws
@@ -49,12 +48,12 @@ def produce_available(msg):
     send_message(config.ANNOUNCER_TOPIC, available_message)
     tracker_msg = msgs.create_msg(available_message, "success", "sent message to platform.upload.available")
     send_message(config.TRACKER_TOPIC, tracker_msg)
-    logger.info("Sent success message to %s for request %s", config.ANNOUNCER_TOPIC, available_message.get("request_id"))
 
 
 def check_validation(msg):
     if msg.get("validation") == "success":
         logger.info("Validation success for [%s]", msg.get("request_id"))
+        send_message(config.ANNOUNCER_TOPIC, msg)
     elif msg.get("validation") == "failure":
         tracker_msg = msgs.create_msg(msg, "received", "received validation response")
         send_message(config.TRACKER_TOPIC, tracker_msg)
