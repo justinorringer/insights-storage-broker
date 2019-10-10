@@ -56,7 +56,7 @@ def check_validation(msg):
     if msg.get("validation") == "success":
         if msg.get("service") != "advisor":
             send_message(config.ANNOUNCER_TOPIC, msg)
-            logger.info("Non Advisor message announced to platform")
+            logger.info("Non Advisor message announced to platform: %s - %s", msg.get("service"), msg.get("request_id"))
             logger.debug("Message contents: %s", msg)
         logger.info("Validation success for [%s]", msg.get("request_id"))
     elif msg.get("validation") == "failure":
