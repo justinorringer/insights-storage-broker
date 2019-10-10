@@ -1,5 +1,4 @@
 import traceback
-import requests
 
 from mq import consume, produce, msgs
 from storage import aws
