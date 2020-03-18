@@ -1,0 +1,33 @@
+@startuml
+node "Kafka" {
+  [Topic A]
+  [Topic B]
+  [Topic N]
+  [Topic ...]
+}
+
+node "Storage Broker" {
+  [Consumer]
+  [S3 Client]
+}
+
+cloud "AWS" {
+  folder "S3" {
+    [S3 Client] --> Copy
+    folder "Ingress Bucket" {
+      [Payload Source]
+    }
+
+    folder "Service Bucket" {
+      [Payload Dest]
+    }
+  }
+}
+
+
+[Topic A] --> [Consumer]
+[Topic B] --> [Consumer]
+[Topic N] --> [Consumer]
+
+[Payload Source] --> [Payload Dest]
+@enduml
