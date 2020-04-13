@@ -7,16 +7,20 @@ import watchtower
 from logstash_formatter import LogstashFormatterV1
 from boto3.session import Session
 
-from utils import config
+from ..utils import config
 
 
 def config_cloudwatch(logger):
-    CW_SESSION = Session(aws_access_key_id=config.CW_AWS_ACCESS_KEY_ID,
-                         aws_secret_access_key=config.CW_AWS_SECRET_ACCESS_KEY,
-                         region_name=config.AWS_REGION)
-    cw_handler = watchtower.CloudWatchLogHandler(boto3_session=CW_SESSION,
-                                                 log_group=config.LOG_GROUP,
-                                                 stream_name=config.NAMESPACE)
+    CW_SESSION = Session(
+        aws_access_key_id=config.CW_AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=config.CW_AWS_SECRET_ACCESS_KEY,
+        region_name=config.AWS_REGION,
+    )
+    cw_handler = watchtower.CloudWatchLogHandler(
+        boto3_session=CW_SESSION,
+        log_group=config.LOG_GROUP,
+        stream_name=config.NAMESPACE,
+    )
     cw_handler.setFormatter(LogstashFormatterV1())
     logger.addHandler(cw_handler)
 
@@ -32,12 +36,12 @@ def initialize_logging():
     else:
         logging.basicConfig(
             level=config.LOG_LEVEL,
-            format="%(threadName)s %(levelname)s %(name)s - %(message)s"
+            format="%(threadName)s %(levelname)s %(name)s - %(message)s",
         )
 
     logger = logging.getLogger(config.APP_NAME)
 
-    if (config.CW_AWS_ACCESS_KEY_ID and config.CW_AWS_SECRET_ACCESS_KEY):
+    if config.CW_AWS_ACCESS_KEY_ID and config.CW_AWS_SECRET_ACCESS_KEY:
         config_cloudwatch(logger)
         logger.info("Cloudwatch Logging Enabled")
     else:
