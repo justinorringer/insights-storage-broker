@@ -1,8 +1,8 @@
 import traceback
 
-from mq import consume, produce, msgs
-from storage import aws
-from utils import broker_logging, config
+from .mq import consume, produce, msgs
+from .storage import aws
+from .utils import broker_logging, config
 
 from botocore.exceptions import ClientError
 from kafka.errors import KafkaError
@@ -45,10 +45,14 @@ def produce_available(msg):
     if msg["host"].get("system_profile"):
         del msg["host"]["system_profile"]
     available_message = {**msg, **platform_metadata}
-    tracker_msg = msgs.create_msg(available_message, "received", "received egress message")
+    tracker_msg = msgs.create_msg(
+        available_message, "received", "received egress message"
+    )
     send_message(config.TRACKER_TOPIC, tracker_msg)
     send_message(config.ANNOUNCER_TOPIC, available_message)
-    tracker_msg = msgs.create_msg(available_message, "success", "sent message to platform.upload.available")
+    tracker_msg = msgs.create_msg(
+        available_message, "success", "sent message to platform.upload.available"
+    )
     send_message(config.TRACKER_TOPIC, tracker_msg)
 
 
@@ -61,10 +65,16 @@ def check_validation(msg):
         send_message(config.TRACKER_TOPIC, tracker_msg)
         try:
             aws.copy(msg.get("request_id"))
-            tracker_msg = msgs.create_msg(msg, "success", "copied failed payload to reject bucket")
+            tracker_msg = msgs.create_msg(
+                msg, "success", "copied failed payload to reject bucket"
+            )
             send_message(config.TRACKER_TOPIC, tracker_msg)
         except ClientError:
-            logger.exception("Unable to move %s to %s bucket", config.REJECT_BUCKET, msg.get("request_id"))
+            logger.exception(
+                "Unable to move %s to %s bucket",
+                config.REJECT_BUCKET,
+                msg.get("request_id"),
+            )
     else:
         logger.error("Validation status not supported: [%s]", msg.get("validation"))
 
@@ -73,9 +83,13 @@ def send_message(topic, msg):
     try:
         producer.send(topic=topic, value=msg)
         logger.debug("Message contents for %s: %s", topic, msg)
-        logger.info("Sent message to %s for request_id %s", topic, msg.get("request_id"))
+        logger.info(
+            "Sent message to %s for request_id %s", topic, msg.get("request_id")
+        )
     except KafkaError:
-        logger.exception("Unable to topic [%s] for request id [%s]", topic, msg.get("request_id"))
+        logger.exception(
+            "Unable to topic [%s] for request id [%s]", topic, msg.get("request_id")
+        )
 
 
 if __name__ == "__main__":
