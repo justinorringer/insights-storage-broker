@@ -1,16 +1,39 @@
-import traceback
+import signal
+import json
 
 from .mq import consume, produce, msgs
 from .storage import aws
 from .utils import broker_logging, config
 
 from botocore.exceptions import ClientError
-from kafka.errors import KafkaError
+from confluent_kafka import KafkaError
+from prometheus_client import start_http_server
+from functools import partial
 
 
 logger = broker_logging.initialize_logging()
 
+
+def start_prometheus():
+    start_http_server(config.PROMETHEUS_PORT)
+
+
 producer = None
+
+
+topic_map = {"platform.inventory.host-egress": "platform.upload.available",
+             "platform.inventory.host-events": "platform.upload.available"}
+
+
+running = True
+
+
+def handle_signal(signal, frame):
+    global running
+    running = False
+
+
+signal.signal(signal.SIGTERM, handle_signal)
 
 
 def main():
@@ -23,17 +46,49 @@ def main():
     global producer
     producer = produce.init_producer()
 
-    while True:
-        for data in consumer:
-            try:
-                if data.topic == config.CONSUME_TOPIC:
-                    check_validation(data.value)
-                else:
-                    produce_available(data.value)
-            except Exception:
-                logger.exception("An error occurred during message processing")
+    while running:
+        msg = consumer.poll(1.0)
+        if msg is None:
+            continue
+        if msg.error():
+            logger.error("Consumer error: %s", msg.error())
+            continue
+
+        try:
+            data = json.loads(msg.value().decode("utf-8"))
+            if msg.topic() == config.CONSUME_TOPIC:
+                check_validation(data)
+            else:
+                produce_available(data)
+        except Exception:
+            logger.exception("An error occurred during message processing")
+
+        if not config.KAFKA_AUTO_COMMIT:
+            consumer.commit()
 
         producer.flush()
+
+    consumer.close()
+    producer.flush()
+
+
+def delivery_report(err, msg=None, request_id=None):
+    if err is not None:
+        logger.error(
+            "Message delivery for topic %s failed for request_id [%s]: %s",
+            msg.topic(),
+            err,
+            request_id
+        )
+        logger.info("Message contents: %s", json.loads(msg.value().decode("utf-8")))
+    else:
+        logger.info(
+            "Message delivered to %s [%s] for request_id [%s]",
+            msg.topic(),
+            msg.partition(),
+            request_id,
+        )
+        logger.info("Message contents: %s", json.loads(msg.value().decode("utf-8")))
 
 
 # This is is a way to support legacy uploads that are expected to be on the
@@ -81,11 +136,9 @@ def check_validation(msg):
 
 def send_message(topic, msg):
     try:
-        producer.send(topic=topic, value=msg)
-        logger.debug("Message contents for %s: %s", topic, msg)
-        logger.info(
-            "Sent message to %s for request_id %s", topic, msg.get("request_id")
-        )
+        producer.poll(0)
+        _bytes = json.dumps(msg, ensure_ascii=False).encode("utf-8")
+        producer.produce(topic, _bytes, callback=partial(delivery_report, request_id=msg.get("request_id")))
     except KafkaError:
         logger.exception(
             "Unable to topic [%s] for request id [%s]", topic, msg.get("request_id")
@@ -93,8 +146,4 @@ def send_message(topic, msg):
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception:
-        the_error = traceback.format_exc()
-        logger.error(f"Storage Broker failed with Error: {the_error}")
+    main()
