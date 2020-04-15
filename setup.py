@@ -12,6 +12,8 @@ setup(
         "boto3==1.12.38",
         "watchtower==0.7.3",
         "confluent-kafka==1.3.0",
+        "pyyaml==5.3.1",
+        "attrs==18.2.0",
     ],
     extras_require={"test": ["pytest>=5.4.1", "flake8>=3.7.9"]},
     entry_points={"console_scripts": ["storage_broker = storage_broker.app:main"]},
