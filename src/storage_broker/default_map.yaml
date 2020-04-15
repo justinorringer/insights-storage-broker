@@ -1,0 +1,9 @@
+default:
+  format: "{request_id}"
+  bucket: "insights-upload-rejected"
+openshift:
+  format: "{org}/{cluster_id}/{timestamp}-{request_id}"
+  bucket: "insights-buck-it-openshift"
+ansible:
+  format: "{org}/{cluster_id}/{timestamp}-{request_id}"
+  bucket: "insights-buck-it-ansible"
