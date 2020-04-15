@@ -1,5 +1,7 @@
 import signal
 import json
+import yaml
+import attr
 
 from .mq import consume, produce, msgs
 from .storage import aws
@@ -9,7 +11,8 @@ from botocore.exceptions import ClientError
 from confluent_kafka import KafkaError
 from prometheus_client import start_http_server
 from functools import partial
-
+from base64 import b64decode
+from datetime import datetime
 
 logger = broker_logging.initialize_logging()
 
@@ -18,14 +21,18 @@ def start_prometheus():
     start_http_server(config.PROMETHEUS_PORT)
 
 
-producer = None
+try:
+    with open(config.BUCKET_MAP_FILE, "rb") as f:
+        BUCKET_MAP = yaml.safe_load(f)
+except Exception as e:
+    logger.exception(e)
+    BUCKET_MAP = {}
 
-
-topic_map = {"platform.inventory.host-egress": "platform.upload.available",
-             "platform.inventory.host-events": "platform.upload.available"}
-
+formatter = {}
 
 running = True
+
+producer = None
 
 
 def handle_signal(signal, frame):
@@ -56,9 +63,14 @@ def main():
 
         try:
             data = json.loads(msg.value().decode("utf-8"))
-            if msg.topic() == config.CONSUME_TOPIC:
+            if msg.topic() == config.VALIDATION_TOPIC:
+                # if it comes in on validation actually check it
                 check_validation(data)
+            elif msg.topic() == config.STORAGE_TOPIC:
+                key, bucket = get_key(data)
+                aws.copy(data["request_id"], config.STAGE_BUCKET, bucket, key)
             else:
+                # otherwise it comes from egress and we should just reproduce it
                 produce_available(data)
         except Exception:
             logger.exception("An error occurred during message processing")
@@ -73,6 +85,9 @@ def main():
 
 
 def delivery_report(err, msg=None, request_id=None):
+    """
+    Callback function for produced messages
+    """
     if err is not None:
         logger.error(
             "Message delivery for topic %s failed for request_id [%s]: %s",
@@ -89,6 +104,57 @@ def delivery_report(err, msg=None, request_id=None):
             request_id,
         )
         logger.info("Message contents: %s", json.loads(msg.value().decode("utf-8")))
+
+
+@attr.s
+class KeyMap(object):
+    org_id = attr.ib(default=None)
+    request_id = attr.ib(default="-1")
+    category = attr.ib(default=None)
+    account = attr.ib(default=None)
+    timestamp = attr.ib(default=None)
+    cluster_id = attr.ib(default=None)
+    metadata = attr.ib(default=dict)
+    principal = attr.ib(default=None)
+    size = attr.ib(default=None)
+    url = attr.ib(default=None)
+    service = attr.ib(default="default")
+    b64_identity = attr.ib(default=None)
+
+    @classmethod
+    def from_json(cls, doc):
+        try:
+            return cls(**doc)
+        except Exception:
+            logger.exception("failed to deserialize message: %s", doc)
+            raise
+
+    def identity(self):
+        return json.loads(b64decode(self.b64_identity))
+
+
+def get_key(msg):
+    """
+    Get the key that will be used when transferring file to the new bucket
+    """
+    key_map = KeyMap.from_json(msg)
+    key_map.timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+
+    if msg["service"] in BUCKET_MAP.keys():
+        service = msg["service"]
+        ident = key_map.identity()
+        key_map.org_id = ident["identity"]["internal"].get("org_id")
+        key_map.account = ident["identity"]["account_number"]
+        if ident.get("system"):
+            key_map.cluster_id = ident["system"].get("cluster_id")
+        formatter = BUCKET_MAP[service]["format"]
+        key = formatter.format(**key_map.__dict__)
+        bucket = BUCKET_MAP[service]["bucket"]
+    else:
+        key = key_map["request_id"]
+        bucket = config.REJECT_BUCKET
+
+    return key, bucket
 
 
 # This is is a way to support legacy uploads that are expected to be on the
@@ -119,7 +185,7 @@ def check_validation(msg):
         tracker_msg = msgs.create_msg(msg, "received", "received validation response")
         send_message(config.TRACKER_TOPIC, tracker_msg)
         try:
-            aws.copy(msg.get("request_id"))
+            aws.copy(msg.get("request_id"), config.STAGE_BUCKET, config.REJECT_BUCKET, msg.get("request_id"))
             tracker_msg = msgs.create_msg(
                 msg, "success", "copied failed payload to reject bucket"
             )

@@ -13,5 +13,5 @@ def init_consumer():
         }
     )
 
-    consumer.subscribe([config.CONSUME_TOPIC, config.EGRESS_TOPIC])
+    consumer.subscribe([config.VALIDATION_TOPIC, config.EGRESS_TOPIC, config.STORAGE_TOPIC])
     return consumer

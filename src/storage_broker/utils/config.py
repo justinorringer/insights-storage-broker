@@ -28,8 +28,9 @@ def get_namespace():
 INVENTORY_URL = os.getenv("INVENTORY_URL", "http://insights-inventory:8080/api/inventory/v1/hosts")
 
 # Kafka
-CONSUME_TOPIC = os.getenv("CONSUME_TOPIC", "platform.upload.validation")
+VALIDATION_TOPIC = os.getenv("CONSUME_TOPIC", "platform.upload.validation")
 ANNOUNCER_TOPIC = os.getenv("ANNOUNCER_TOPIC", "platform.upload.available")
+STORAGE_TOPIC = os.getenv("STORAGE_TOPIC", "platform.upload.buckit")
 EGRESS_TOPIC = os.getenv("EGRESS_TOPIC", "platform.inventory.host-egress")
 TRACKER_TOPIC = os.getenv("TRACKER_TOPIC", "platform.payload-status")
 BOOTSTRAP_SERVERS = os.getenv("BOOTSTRAP_SERVERS", "kafka:29092").split()
@@ -44,6 +45,7 @@ AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 STAGE_BUCKET = os.getenv("STAGE_BUCKET", "insights-dev-upload-perm")
 REJECT_BUCKET = os.getenv("REJECT_BUCKET", "insights-dev-upload-rejected")
 S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL", None)
+BUCKET_MAP_FILE = os.getenv("BUCKET_MAP_FILE", "/opt/app-root/src/default_map.yaml")
 
 # Logging
 CW_AWS_ACCESS_KEY_ID = os.getenv("CW_AWS_ACCESS_KEY_ID", None)

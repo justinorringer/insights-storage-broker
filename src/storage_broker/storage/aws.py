@@ -14,19 +14,19 @@ s3 = boto3.client(
 )
 
 
-def copy(key):
-    copy_src = {"Bucket": config.STAGE_BUCKET, "Key": key}
+def copy(key, src, dest, new_key):
+    copy_src = {"Bucket": src, "Key": key}
 
-    s3.copy(copy_src, config.REJECT_BUCKET, key)
-    s3.delete_object(Bucket=config.STAGE_BUCKET, Key=key)
-    logger.info("Request ID [%s] moved to [%s]", key, config.REJECT_BUCKET)
+    s3.copy(copy_src, dest, new_key)
+    s3.delete_object(Bucket=src, Key=key)
+    logger.info("Request ID [%s] moved to [%s]", new_key, dest)
 
 
-def get_url(key):
+def get_url(key, src):
     try:
         response = s3.generate_presigned_url(
             "get_object",
-            Params={"Bucket": config.STAGE_BUCKET, "Key": key},
+            Params={"Bucket": src, "Key": key},
             ExpiresIn=86400,
         )
         logger.debug(response)
