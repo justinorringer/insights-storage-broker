@@ -8,6 +8,7 @@ from storage_broker.utils import config
 
 logger = logging.getLogger(config.APP_NAME)
 
+
 @attr.s
 class KeyMap(object):
     org_id = attr.ib(default=None)
