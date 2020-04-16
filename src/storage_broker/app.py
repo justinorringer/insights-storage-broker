@@ -4,7 +4,7 @@ import yaml
 
 from storage_broker.mq import consume, produce, msgs
 from storage_broker.storage import aws
-from storage_broker.utils import broker_logging, config
+from storage_broker.utils import broker_logging, config, metrics
 from storage_broker import KeyMap
 
 from botocore.exceptions import ClientError
@@ -57,9 +57,11 @@ def main():
         if msg is None:
             continue
         if msg.error():
+            metrics.message_consume_error_count.inc()
             logger.error("Consumer error: %s", msg.error())
             continue
 
+        metrics.message_consume_count.inc()
         try:
             data = json.loads(msg.value().decode("utf-8"))
             if msg.topic() == config.VALIDATION_TOPIC:
@@ -74,9 +76,7 @@ def main():
         except Exception:
             logger.exception("An error occurred during message processing")
 
-        if not config.KAFKA_AUTO_COMMIT:
-            consumer.commit()
-
+        consumer.commit()
         producer.flush()
 
     consumer.close()
@@ -105,6 +105,7 @@ def delivery_report(err, msg=None, request_id=None):
         logger.info("Message contents: %s", json.loads(msg.value().decode("utf-8")))
 
 
+@metrics.get_key_time.time()
 def get_key(msg):
     """
     Get the key that will be used when transferring file to the new bucket

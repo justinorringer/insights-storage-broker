@@ -36,7 +36,6 @@ TRACKER_TOPIC = os.getenv("TRACKER_TOPIC", "platform.payload-status")
 BOOTSTRAP_SERVERS = os.getenv("BOOTSTRAP_SERVERS", "kafka:29092").split()
 GROUP_ID = os.getenv("GROUP_ID", APP_NAME)
 KAFKA_QUEUE_MAX_KBYTES = os.getenv("KAFKA_QUEUE_MAX_KBYTES", 1024)
-KAFKA_AUTO_COMMIT = os.getenv("KAFKA_AUTO_COMMIT", False)
 
 # S3
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", None)
