@@ -2,7 +2,7 @@ import logging
 import boto3
 from botocore.exceptions import ClientError
 
-from ..utils import config
+from storage_broker.utils import config
 
 logger = logging.getLogger(config.APP_NAME)
 

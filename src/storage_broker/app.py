@@ -1,17 +1,16 @@
 import signal
 import json
 import yaml
-import attr
 
-from .mq import consume, produce, msgs
-from .storage import aws
-from .utils import broker_logging, config
+from storage_broker.mq import consume, produce, msgs
+from storage_broker.storage import aws
+from storage_broker.utils import broker_logging, config
+from storage_broker import KeyMap
 
 from botocore.exceptions import ClientError
 from confluent_kafka import KafkaError
 from prometheus_client import start_http_server
 from functools import partial
-from base64 import b64decode
 from datetime import datetime
 
 logger = broker_logging.initialize_logging()
@@ -106,33 +105,6 @@ def delivery_report(err, msg=None, request_id=None):
         logger.info("Message contents: %s", json.loads(msg.value().decode("utf-8")))
 
 
-@attr.s
-class KeyMap(object):
-    org_id = attr.ib(default=None)
-    request_id = attr.ib(default="-1")
-    category = attr.ib(default=None)
-    account = attr.ib(default=None)
-    timestamp = attr.ib(default=None)
-    cluster_id = attr.ib(default=None)
-    metadata = attr.ib(default=dict)
-    principal = attr.ib(default=None)
-    size = attr.ib(default=None)
-    url = attr.ib(default=None)
-    service = attr.ib(default="default")
-    b64_identity = attr.ib(default=None)
-
-    @classmethod
-    def from_json(cls, doc):
-        try:
-            return cls(**doc)
-        except Exception:
-            logger.exception("failed to deserialize message: %s", doc)
-            raise
-
-    def identity(self):
-        return json.loads(b64decode(self.b64_identity))
-
-
 def get_key(msg):
     """
     Get the key that will be used when transferring file to the new bucket
@@ -145,8 +117,8 @@ def get_key(msg):
         ident = key_map.identity()
         key_map.org_id = ident["identity"]["internal"].get("org_id")
         key_map.account = ident["identity"]["account_number"]
-        if ident.get("system"):
-            key_map.cluster_id = ident["system"].get("cluster_id")
+        if ident["identity"].get("system"):
+            key_map.cluster_id = ident["identity"]["system"].get("cluster_id")
         formatter = BUCKET_MAP[service]["format"]
         key = formatter.format(**key_map.__dict__)
         bucket = BUCKET_MAP[service]["bucket"]

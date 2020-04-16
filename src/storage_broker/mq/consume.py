@@ -1,6 +1,6 @@
 from confluent_kafka import Consumer
 
-from ..utils import config
+from storage_broker.utils import config
 
 
 def init_consumer():
