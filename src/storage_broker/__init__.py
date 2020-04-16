@@ -17,16 +17,14 @@ class KeyMap(object):
     account = attr.ib(default=None)
     timestamp = attr.ib(default=None)
     cluster_id = attr.ib(default=None)
-    metadata = attr.ib(default=dict)
     principal = attr.ib(default=None)
-    size = attr.ib(default=None)
-    url = attr.ib(default=None)
     service = attr.ib(default="default")
     b64_identity = attr.ib(default=None)
 
     @classmethod
     def from_json(cls, doc):
         try:
+            doc = {a.name: doc.get(a.name, a.default) for a in attr.fields(KeyMap)}
             return cls(**doc)
         except Exception:
             logger.exception("failed to deserialize message: %s", doc)
