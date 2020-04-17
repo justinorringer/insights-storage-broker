@@ -1,4 +1,4 @@
-from prometheus_client import Summary, Counter
+from prometheus_client import Histogram, Counter
 
 # Counters
 message_consume_error_count = Counter("storage_broker_message_consume_error_count", "Total consumption errors in consumer")
@@ -12,5 +12,5 @@ invalid_validation_status = Counter("storage_broker_invalid_status_count", "Tota
 
 
 # Summaries
-get_key_time = Summary("storage_broker_get_key_function_time_seconds", "Total time to get the key and bucket destination for payload")
-storage_copy_time = Summary("storage_broker_object_copy_time_seconds", "Total time it takes to copy an object from one bucket to another")
+get_key_time = Histogram("storage_broker_get_key_function_time_seconds", "Total time to get the key and bucket destination for payload")
+storage_copy_time = Histogram("storage_broker_object_copy_time_seconds", "Total time it takes to copy an object from one bucket to another")
