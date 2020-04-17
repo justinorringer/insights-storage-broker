@@ -46,7 +46,7 @@ def main():
     logger.info("Starting Storage Broker")
 
     config.log_config()
-    
+
     start_prometheus()
 
     consumer = consume.init_consumer()

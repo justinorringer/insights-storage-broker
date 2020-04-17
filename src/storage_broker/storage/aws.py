@@ -1,6 +1,5 @@
 import logging
 import boto3
-from botocore.exceptions import ClientError
 
 from storage_broker.utils import config
 from storage_broker.utils import metrics
@@ -26,18 +25,3 @@ def copy(key, src, dest, new_key):
     except Exception:
         logger.exception("Failed to copy Request ID [%s]")
         metrics.storage_copy_error.inc()
-
-
-def get_url(key, src):
-    try:
-        response = s3.generate_presigned_url(
-            "get_object",
-            Params={"Bucket": src, "Key": key},
-            ExpiresIn=86400,
-        )
-        logger.debug(response)
-    except ClientError:
-        logger.error("Failed to get url for %s", key)
-        return None
-
-    return response
