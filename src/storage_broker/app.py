@@ -46,6 +46,8 @@ def main():
     logger.info("Starting Storage Broker")
 
     config.log_config()
+    
+    start_prometheus()
 
     consumer = consume.init_consumer()
     global producer
@@ -73,6 +75,7 @@ def main():
                 # otherwise it comes from egress and we should just reproduce it
                 produce_available(data)
         except Exception:
+            metrics.message_json_unpack_error.inc()
             logger.exception("An error occurred during message processing")
 
         consumer.commit()
@@ -94,6 +97,7 @@ def delivery_report(err, msg=None, request_id=None):
             request_id
         )
         logger.info("Message contents: %s", json.loads(msg.value().decode("utf-8")))
+        metrics.message_publish_error.inc()
     else:
         logger.info(
             "Message delivered to %s [%s] for request_id [%s]",
@@ -102,6 +106,7 @@ def delivery_report(err, msg=None, request_id=None):
             request_id,
         )
         logger.info("Message contents: %s", json.loads(msg.value().decode("utf-8")))
+        metrics.message_publish_count.inc()
 
 
 @metrics.get_key_time.time()
@@ -169,6 +174,7 @@ def check_validation(msg):
             )
     else:
         logger.error("Validation status not supported: [%s]", msg.get("validation"))
+        metrics.invalid_validation_status.inc()
 
 
 def send_message(topic, msg):
