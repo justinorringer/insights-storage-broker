@@ -3,6 +3,7 @@ import json
 import logging
 
 from base64 import b64decode
+from datetime import datetime
 
 from storage_broker.utils import config
 
@@ -25,6 +26,7 @@ class KeyMap(object):
     def from_json(cls, doc):
         try:
             doc = {a.name: doc.get(a.name, a.default) for a in attr.fields(KeyMap)}
+            doc["timestamp"] = datetime.utcnow().strftime("%Y%m%d%H%M%S")
             return cls(**doc)
         except Exception:
             logger.exception("failed to deserialize message: %s", doc)

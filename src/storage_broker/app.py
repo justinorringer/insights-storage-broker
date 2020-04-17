@@ -11,7 +11,6 @@ from botocore.exceptions import ClientError
 from confluent_kafka import KafkaError
 from prometheus_client import start_http_server
 from functools import partial
-from datetime import datetime
 
 logger = broker_logging.initialize_logging()
 
@@ -111,7 +110,6 @@ def get_key(msg):
     Get the key that will be used when transferring file to the new bucket
     """
     key_map = KeyMap.from_json(msg)
-    key_map.timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
 
     if msg["service"] in BUCKET_MAP.keys():
         service = msg["service"]
