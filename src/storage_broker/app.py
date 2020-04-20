@@ -7,30 +7,29 @@ from storage_broker.storage import aws
 from storage_broker.utils import broker_logging, config, metrics
 from storage_broker import KeyMap
 
-from botocore.exceptions import ClientError
 from confluent_kafka import KafkaError
 from prometheus_client import start_http_server
 from functools import partial
 
 logger = broker_logging.initialize_logging()
 
+running = True
+producer = None
+
 
 def start_prometheus():
     start_http_server(config.PROMETHEUS_PORT)
 
 
-try:
-    with open(config.BUCKET_MAP_FILE, "rb") as f:
-        BUCKET_MAP = yaml.safe_load(f)
-except Exception as e:
-    logger.exception(e)
-    BUCKET_MAP = {}
+def load_bucket_map(_file):
+    try:
+        with open(_file, "rb") as f:
+            bucket_map = yaml.safe_load(f)
+    except Exception as e:
+        logger.exception(e)
+        bucket_map = {}
 
-formatter = {}
-
-running = True
-
-producer = None
+    return bucket_map
 
 
 def handle_signal(signal, frame):
@@ -48,6 +47,7 @@ def main():
     config.log_config()
 
     start_prometheus()
+    bucket_map = load_bucket_map(config.BUCKET_MAP_FILE)
 
     consumer = consume.init_consumer()
     global producer
@@ -66,14 +66,28 @@ def main():
         try:
             data = json.loads(msg.value().decode("utf-8"))
             if msg.topic() == config.VALIDATION_TOPIC:
-                # if it comes in on validation actually check it
-                check_validation(data)
+                tracker_msg = msgs.create_msg(data, "received", "received validation response")
+                send_message(config.TRACKER_TOPIC, tracker_msg)
+                if data.get("validation") == "success":
+                    send_message(config.ANNOUNCER_TOPIC, data)
+                    tracker_msg = msgs.create_msg(data, "success", "announced to %s", config.ANNOUNCER_TOPIC)
+                    send_message(config.TRACKER_TOPIC, tracker_msg)
+                elif data.get("validation") == "failure":
+                    aws.copy(data["request_id"], config.STAGE_BUCKET, config.REJECT_BUCKET, data["request_id"])
+                    tracker_msg = msgs.create_msg(
+                        data, "success", "copied failed payload to reject bucket"
+                    )
+                    send_message(config.TRACKER_TOPIC, tracker_msg)
+                else:
+                    logger.error("Invalid validation response")
+                    tracker_msg = msgs.create_msg(data, "error", "invalid validation response: %s", data.get("validation"))
+                    send_message(config.TRACKER_TOPIC, tracker_msg)
             elif msg.topic() == config.STORAGE_TOPIC:
-                key, bucket = get_key(data)
-                aws.copy(data["request_id"], config.STAGE_BUCKET, bucket, key)
+                key, bucket = get_key(data, bucket_map)
+                if key != "pass":
+                    aws.copy(data["request_id"], config.STAGE_BUCKET, bucket, key)
             else:
-                # otherwise it comes from egress and we should just reproduce it
-                produce_available(data)
+                announce(data)
         except Exception:
             metrics.message_json_unpack_error.inc()
             logger.exception("An error occurred during message processing")
@@ -110,32 +124,32 @@ def delivery_report(err, msg=None, request_id=None):
 
 
 @metrics.get_key_time.time()
-def get_key(msg):
+def get_key(msg, bucket_map):
     """
     Get the key that will be used when transferring file to the new bucket
     """
     key_map = KeyMap.from_json(msg)
 
-    if msg["service"] in BUCKET_MAP.keys():
+    if msg["service"] in bucket_map.keys():
         service = msg["service"]
         ident = key_map.identity()
         key_map.org_id = ident["identity"]["internal"].get("org_id")
         key_map.account = ident["identity"]["account_number"]
         if ident["identity"].get("system"):
             key_map.cluster_id = ident["identity"]["system"].get("cluster_id")
-        formatter = BUCKET_MAP[service]["format"]
+        formatter = bucket_map[service]["format"]
         key = formatter.format(**key_map.__dict__)
-        bucket = BUCKET_MAP[service]["bucket"]
+        bucket = bucket_map[service]["bucket"]
     else:
-        key = key_map["request_id"]
-        bucket = config.REJECT_BUCKET
+        key = "pass"
+        bucket = "pass"
 
     return key, bucket
 
 
 # This is is a way to support legacy uploads that are expected to be on the
 # platform.upload.available queue
-def produce_available(msg):
+def announce(msg):
     logger.debug("Incoming Egress Message Content: %s", msg)
     platform_metadata = msg.pop("platform_metadata")
     msg["id"] = msg["host"].get("id")
@@ -151,30 +165,6 @@ def produce_available(msg):
         available_message, "success", "sent message to platform.upload.available"
     )
     send_message(config.TRACKER_TOPIC, tracker_msg)
-
-
-def check_validation(msg):
-    if msg.get("validation") == "success":
-        logger.info("Validation success for [%s]", msg.get("request_id"))
-        send_message(config.ANNOUNCER_TOPIC, msg)
-    elif msg.get("validation") == "failure":
-        tracker_msg = msgs.create_msg(msg, "received", "received validation response")
-        send_message(config.TRACKER_TOPIC, tracker_msg)
-        try:
-            aws.copy(msg.get("request_id"), config.STAGE_BUCKET, config.REJECT_BUCKET, msg.get("request_id"))
-            tracker_msg = msgs.create_msg(
-                msg, "success", "copied failed payload to reject bucket"
-            )
-            send_message(config.TRACKER_TOPIC, tracker_msg)
-        except ClientError:
-            logger.exception(
-                "Unable to move %s to %s bucket",
-                config.REJECT_BUCKET,
-                msg.get("request_id"),
-            )
-    else:
-        logger.error("Validation status not supported: [%s]", msg.get("validation"))
-        metrics.invalid_validation_status.inc()
 
 
 def send_message(topic, msg):
