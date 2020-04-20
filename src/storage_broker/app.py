@@ -70,7 +70,7 @@ def main():
                 send_message(config.TRACKER_TOPIC, tracker_msg)
                 if data.get("validation") == "success":
                     send_message(config.ANNOUNCER_TOPIC, data)
-                    tracker_msg = msgs.create_msg(data, "success", "announced to %s", config.ANNOUNCER_TOPIC)
+                    tracker_msg = msgs.create_msg(data, "success", f"announced to {config.ANNOUNCER_TOPIC}")
                     send_message(config.TRACKER_TOPIC, tracker_msg)
                 elif data.get("validation") == "failure":
                     aws.copy(data["request_id"], config.STAGE_BUCKET, config.REJECT_BUCKET, data["request_id"])
@@ -80,7 +80,7 @@ def main():
                     send_message(config.TRACKER_TOPIC, tracker_msg)
                 else:
                     logger.error("Invalid validation response")
-                    tracker_msg = msgs.create_msg(data, "error", "invalid validation response: %s", data.get("validation"))
+                    tracker_msg = msgs.create_msg(data, "error", f"invalid validation response: {data.get('validation')}")
                     send_message(config.TRACKER_TOPIC, tracker_msg)
             elif msg.topic() == config.STORAGE_TOPIC:
                 key, bucket = get_key(data, bucket_map)
@@ -162,7 +162,7 @@ def announce(msg):
     send_message(config.TRACKER_TOPIC, tracker_msg)
     send_message(config.ANNOUNCER_TOPIC, available_message)
     tracker_msg = msgs.create_msg(
-        available_message, "success", "sent message to platform.upload.available"
+        available_message, "success", f"sent message to {config.ANNOUNCER_TOPIC}"
     )
     send_message(config.TRACKER_TOPIC, tracker_msg)
 
