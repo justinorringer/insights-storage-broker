@@ -1,8 +1,10 @@
 import logging
 import boto3
+
 from botocore.exceptions import ClientError
 
-from ..utils import config
+from storage_broker.utils import config
+from storage_broker.utils import metrics
 
 logger = logging.getLogger(config.APP_NAME)
 
@@ -14,24 +16,18 @@ s3 = boto3.client(
 )
 
 
-def copy(key):
-    copy_src = {"Bucket": config.STAGE_BUCKET, "Key": key}
-
-    s3.copy(copy_src, config.REJECT_BUCKET, key)
-    s3.delete_object(Bucket=config.STAGE_BUCKET, Key=key)
-    logger.info("Request ID [%s] moved to [%s]", key, config.REJECT_BUCKET)
-
-
-def get_url(key):
+@metrics.storage_copy_time.time()
+def copy(key, src, dest, new_key):
+    copy_src = {"Bucket": src, "Key": key}
     try:
-        response = s3.generate_presigned_url(
-            "get_object",
-            Params={"Bucket": config.STAGE_BUCKET, "Key": key},
-            ExpiresIn=86400,
-        )
-        logger.debug(response)
+        s3.copy(copy_src, dest, new_key)
+        s3.delete_object(Bucket=src, Key=key)
+        logger.info("Request ID [%s] moved to [%s]", new_key, dest)
+        metrics.storage_copy_success.inc()
     except ClientError:
-        logger.error("Failed to get url for %s", key)
-        return None
-
-    return response
+        logger.exception(
+            "Unable to move %s to %s bucket",
+            key,
+            dest,
+        )
+        metrics.storage_copy_error.inc()

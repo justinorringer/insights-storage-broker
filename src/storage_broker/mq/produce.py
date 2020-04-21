@@ -1,13 +1,12 @@
-import json
+from confluent_kafka import Producer
 
-from kafka import KafkaProducer
-
-from ..utils import config
+from storage_broker.utils import config
 
 
 def init_producer():
-    producer = KafkaProducer(
-        bootstrap_servers=config.BOOTSTRAP_SERVERS,
-        value_serializer=lambda x: json.dumps(x).encode("utf-8"),
+    producer = Producer(
+        {
+            "bootstrap.servers": ",".join(config.BOOTSTRAP_SERVERS),
+        }
     )
     return producer
