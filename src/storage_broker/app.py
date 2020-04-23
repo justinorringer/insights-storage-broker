@@ -80,16 +80,18 @@ def main():
                     send_message(config.TRACKER_TOPIC, tracker_msg)
                 else:
                     logger.error("Invalid validation response")
+                    metrics.invalid_validation_status.labels(service=data.get("service")).inc()
                     tracker_msg = msgs.create_msg(data, "error", f"invalid validation response: {data.get('validation')}")
                     send_message(config.TRACKER_TOPIC, tracker_msg)
             elif msg.topic() == config.STORAGE_TOPIC:
                 key, bucket = get_key(data, bucket_map)
                 if key != "pass":
                     aws.copy(data["request_id"], config.STAGE_BUCKET, bucket, key)
+                    metrics.payload_size.labels(service=data.get("service")).observe(data.get("size"))
             else:
                 announce(data)
         except Exception:
-            metrics.message_json_unpack_error.inc()
+            metrics.message_json_unpack_error.labels(topic=msg.topic()).inc()
             logger.exception("An error occurred during message processing")
 
         consumer.commit()

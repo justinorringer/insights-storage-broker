@@ -23,11 +23,11 @@ def copy(key, src, dest, new_key):
         s3.copy(copy_src, dest, new_key)
         s3.delete_object(Bucket=src, Key=key)
         logger.info("Request ID [%s] moved to [%s]", new_key, dest)
-        metrics.storage_copy_success.inc()
+        metrics.storage_copy_success.labels(bucket=dest).inc()
     except ClientError:
         logger.exception(
             "Unable to move %s to %s bucket",
             key,
             dest,
         )
-        metrics.storage_copy_error.inc()
+        metrics.storage_copy_error.labels(bucket=dest).inc()
