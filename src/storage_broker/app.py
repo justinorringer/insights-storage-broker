@@ -87,7 +87,7 @@ def main():
                 key, bucket = get_key(data, bucket_map)
                 if key != "pass":
                     aws.copy(data["request_id"], config.STAGE_BUCKET, bucket, key)
-                    metrics.payload_size.labels(data.get("service").observe(data.get("size")))
+                    metrics.payload_size.labels(service=data.get("service").observe(data.get("size")))
             else:
                 announce(data)
         except Exception:
