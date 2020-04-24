@@ -21,7 +21,7 @@ def copy(key, src, dest, new_key):
     copy_src = {"Bucket": src, "Key": key}
     try:
         s3.copy(copy_src, dest, new_key)
-        logger.info("Request ID [%s] moved to [%s]", new_key, dest)
+        logger.info("Request ID [%s] moved to [%s] at [%s]", key, new_key, dest)
         metrics.storage_copy_success.labels(bucket=dest).inc()
     except ClientError:
         logger.exception(
