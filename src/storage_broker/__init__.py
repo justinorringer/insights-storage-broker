@@ -21,6 +21,7 @@ class KeyMap(object):
     principal = attr.ib(default=None)
     service = attr.ib(default="default")
     b64_identity = attr.ib(default=None)
+    size = attr.ib(default=None)
 
     @classmethod
     def from_json(cls, doc):
