@@ -1,6 +1,8 @@
 # Insights Storage Broker
 
-The Insights Storage Broker microservice is responsible for moving uploaded packages from the staging to rejected storage bucket in the event the file fails validation. It will also advertise successful payloads to the platform via the `platform.upload.available` topic. It reads from the `platform.upload.validation` topic by default.
+The Insights Storage Broker microservice is responsible for moving uploaded data from the ingress staging bucket to another bucket.  This enables workflows ranging from a simple ingress to egress, to storing payloads in a quarantine bucket for later inspection.
+
+It will also advertise successful payloads to the platform via the `platform.upload.available` topic. It reads from the `platform.upload.validation` topic by default.
 
 ## How it Works
 
@@ -41,6 +43,19 @@ Available Message:
               ...
           }
       }
+
+
+## Configuration
+
+The primary configuration for storage broker looks like this:
+    [
+        {
+            "service": "my-service",
+            "bucket": "s3://my-service-outbox",
+            "layout": "{account_number}/{system_id}/{request_id}.tgz"
+        },
+        ...
+    ]
 
 ## Authors
 
