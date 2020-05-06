@@ -54,4 +54,5 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 NAMESPACE = get_namespace()
 
 # Metrics
+PROMETHEUS = os.getenv("PROMETHEUS", "True")
 PROMETHEUS_PORT = os.getenv("PROMETHEUS_PORT", 8080)

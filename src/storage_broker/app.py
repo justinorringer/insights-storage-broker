@@ -1,12 +1,14 @@
 import signal
 import json
 import yaml
+import attr
 
 from storage_broker.mq import consume, produce, msgs
 from storage_broker.storage import aws
 from storage_broker.utils import broker_logging, config, metrics
-from storage_broker import KeyMap
+from storage_broker import TrackerMessage, normalizers
 
+from datetime import datetime
 from confluent_kafka import KafkaError
 from prometheus_client import start_http_server
 from functools import partial
@@ -15,6 +17,7 @@ logger = broker_logging.initialize_logging()
 
 running = True
 producer = None
+bucket_map = {}
 
 
 def start_prometheus():
@@ -46,7 +49,9 @@ def main():
 
     config.log_config()
 
-    start_prometheus()
+    if config.PROMETHEUS == "True":
+        start_prometheus()
+    global bucket_map
     bucket_map = load_bucket_map(config.BUCKET_MAP_FILE)
 
     consumer = consume.init_consumer()
@@ -63,33 +68,24 @@ def main():
             continue
 
         metrics.message_consume_count.inc()
+        if msg.topic() == config.EGRESS_TOPIC:
+            announce(msg.value())
+            continue
         try:
-            data = json.loads(msg.value().decode("utf-8"))
-            if msg.topic() == config.VALIDATION_TOPIC:
-                tracker_msg = msgs.create_msg(data, "received", "received validation response")
-                send_message(config.TRACKER_TOPIC, tracker_msg)
-                if data.get("validation") == "success":
-                    send_message(config.ANNOUNCER_TOPIC, data)
-                    tracker_msg = msgs.create_msg(data, "success", f"announced to {config.ANNOUNCER_TOPIC}")
-                    send_message(config.TRACKER_TOPIC, tracker_msg)
-                elif data.get("validation") == "failure":
-                    aws.copy(data["request_id"], config.STAGE_BUCKET, config.REJECT_BUCKET, data["request_id"])
-                    tracker_msg = msgs.create_msg(
-                        data, "success", "copied failed payload to reject bucket"
-                    )
-                    send_message(config.TRACKER_TOPIC, tracker_msg)
-                else:
-                    logger.error("Invalid validation response")
-                    metrics.invalid_validation_status.labels(service=data.get("service")).inc()
-                    tracker_msg = msgs.create_msg(data, "error", f"invalid validation response: {data.get('validation')}")
-                    send_message(config.TRACKER_TOPIC, tracker_msg)
-            elif msg.topic() == config.STORAGE_TOPIC:
-                key, bucket = get_key(data, bucket_map)
-                if key != "pass":
-                    aws.copy(data["request_id"], config.STAGE_BUCKET, bucket, key)
-                    metrics.payload_size.labels(service=data.get("service")).observe(data.get("size"))
+            tracker_msg = TrackerMessage.from_json(msg.value().decode("utf-8"))
+            data = normalize(bucket_map, msg)
+            tracker_msg.status, tracker_msg.status_msg, tracker_msg.date = ("received",
+                                                                            "received message",
+                                                                            datetime.now().isoformat())
+            send_message(config.TRACKER_TOPIC, attr.asdict(tracker_msg))
+            if data.topic == config.VALIDATION_TOPIC:
+                handle_validation(msg, data, tracker_msg)
             else:
-                announce(data)
+                try:
+                    handle_bucket(msg.topic(), data, tracker_msg)
+                except Exception:
+                    logger.error(f"No map provided for {data.service}")
+                    continue
         except Exception:
             metrics.message_json_unpack_error.labels(topic=msg.topic()).inc()
             logger.exception("An error occurred during message processing")
@@ -97,8 +93,50 @@ def main():
         consumer.commit()
         producer.flush()
 
-    consumer.close()
+    consumer.commit()
     producer.flush()
+
+
+def handle_bucket(topic, data, tracker_msg):
+    try:
+        for d in bucket_map[topic]:
+            if d["service"] == data.service:
+                _map = d
+        formatter = _map["format"]
+        key = formatter.format(**data.__dict__)
+        bucket = _map["bucket"]
+    except Exception as e:
+        logger.exception("something went wrong: %s", e)
+        raise
+
+    aws.copy(data.request_id, config.STAGE_BUCKET, bucket, key)
+    metrics.payload_size.labels(service=data.service).observe(data.size)
+
+
+def handle_validation(msg, data, tracker_msg):
+    tracker_msg.status, tracker_msg.status_msg, tracker_msg.date = ("received",
+                                                                    "received validation response",
+                                                                    datetime.now().isoformat())
+    send_message(config.TRACKER_TOPIC, attr.asdict(tracker_msg))
+    if data.validation == "success":
+        send_message(config.ANNOUNCER_TOPIC, json.loads(msg.value()).decode("utf-8"))
+        tracker_msg.status, tracker_msg.status_msg, tracker_msg.date = ("success",
+                                                                        f"announced to {config.ANNOUNCER_TOPIC}",
+                                                                        datetime.now().isoformat())
+        send_message(config.TRACKER_TOPIC, attr.asdict(tracker_msg))
+    if data.validation == "failure":
+        aws.copy(data.request_id, config.STAGE_BUCKET, config.REJECT_BUCKET, data.request_id)
+        tracker_msg.status, tracker_msg.status_msg, tracker_msg.date = ("success",
+                                                                        "copied failed payload to rejected bucket",
+                                                                        datetime.now().isoformat())
+        send_message(config.TRACKER_TOPIC, attr.asdict(tracker_msg))
+    else:
+        logger.error(f"Invalid validation response: {data.validation}")
+        metrics.invalid_validation_status.labels(service=data.service).inc()
+        tracker_msg.status, tracker_msg.status_msg, tracker_msg.date = ("error",
+                                                                        f"invalid validation response: {data.validation}",
+                                                                        datetime.now().isoformat())
+        send_message(config.TRACKER_TOPIC, attr.asdict(tracker_msg))
 
 
 def delivery_report(err, msg=None, request_id=None):
@@ -125,33 +163,10 @@ def delivery_report(err, msg=None, request_id=None):
         metrics.message_publish_count.inc()
 
 
-@metrics.get_key_time.time()
-def get_key(msg, bucket_map):
-    """
-    Get the key that will be used when transferring file to the new bucket
-    """
-    key_map = KeyMap.from_json(msg)
-
-    if msg["service"] in bucket_map.keys():
-        service = msg["service"]
-        ident = key_map.identity()
-        key_map.org_id = ident["identity"]["internal"].get("org_id")
-        key_map.account = ident["identity"]["account_number"]
-        if ident["identity"].get("system"):
-            key_map.cluster_id = ident["identity"]["system"].get("cluster_id")
-        formatter = bucket_map[service]["format"]
-        key = formatter.format(**key_map.__dict__)
-        bucket = bucket_map[service]["bucket"]
-    else:
-        key = "pass"
-        bucket = "pass"
-
-    return key, bucket
-
-
 # This is is a way to support legacy uploads that are expected to be on the
 # platform.upload.available queue
 def announce(msg):
+    msg = json.loads(msg.decode("utf-8"))
     logger.debug("Incoming Egress Message Content: %s", msg)
     platform_metadata = msg.pop("platform_metadata")
     msg["id"] = msg["host"].get("id")
@@ -167,6 +182,16 @@ def announce(msg):
         available_message, "success", f"sent message to {config.ANNOUNCER_TOPIC}"
     )
     send_message(config.TRACKER_TOPIC, tracker_msg)
+
+
+def normalize(bucket_map, msg):
+    topic = msg.topic()
+    data = json.loads(msg.value().decode("utf-8"))
+    for d in bucket_map[topic]:
+        if d["service"] == data["service"]:
+            normalizer = getattr(normalizers, d["normalizer"])()
+    normalized_data = normalizer.from_json(data, msg.topic())
+    return normalized_data
 
 
 def send_message(topic, msg):

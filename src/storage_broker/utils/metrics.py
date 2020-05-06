@@ -14,5 +14,4 @@ invalid_validation_status = Counter("storage_broker_invalid_status_count", "Tota
 payload_size = Summary("storage_broker_payload_size_bytes", "Total size in bytes of payload to store", ["service"])
 
 # Histograms
-get_key_time = Histogram("storage_broker_get_key_function_time_seconds", "Total time to get the key and bucket destination for payload")
 storage_copy_time = Histogram("storage_broker_object_copy_time_seconds", "Total time it takes to copy an object from one bucket to another")
