@@ -17,7 +17,8 @@ s3 = boto3.client(
 
 
 @metrics.storage_copy_time.time()
-def copy(key, src, dest, new_key):
+def copy(key, src, dest, new_key, size, service):
+    metrics.payload_size.labels(service=service).observe(size)
     copy_src = {"Bucket": src, "Key": key}
     try:
         s3.copy(copy_src, dest, new_key)
@@ -25,8 +26,6 @@ def copy(key, src, dest, new_key):
         metrics.storage_copy_success.labels(bucket=dest).inc()
     except ClientError:
         logger.exception(
-            "Unable to move %s to %s bucket",
-            key,
-            dest,
+            "Unable to move %s to %s bucket", key, dest,
         )
         metrics.storage_copy_error.labels(bucket=dest).inc()

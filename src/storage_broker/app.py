@@ -1,11 +1,12 @@
 import signal
 import json
 import yaml
+import attr
 
 from storage_broker.mq import consume, produce, msgs
 from storage_broker.storage import aws
 from storage_broker.utils import broker_logging, config, metrics
-from storage_broker import KeyMap
+from storage_broker import TrackerMessage, normalizers
 
 from confluent_kafka import KafkaError
 from prometheus_client import start_http_server
@@ -46,7 +47,9 @@ def main():
 
     config.log_config()
 
-    start_prometheus()
+    if config.PROMETHEUS == "True":
+        start_prometheus()
+
     bucket_map = load_bucket_map(config.BUCKET_MAP_FILE)
 
     consumer = consume.init_consumer()
@@ -62,91 +65,107 @@ def main():
             logger.error("Consumer error: %s", msg.error())
             continue
 
-        metrics.message_consume_count.inc()
         try:
-            data = json.loads(msg.value().decode("utf-8"))
+            decoded_msg = json.loads(msg.value().decode("utf-8"))
+        except Exception:
+            logger.exception("Unable to decode message from topic: %s", msg.topic())
+
+        metrics.message_consume_count.inc()
+        if msg.topic() == config.EGRESS_TOPIC:
+            announce(decoded_msg)
+            continue
+
+        try:
+            _map = bucket_map[msg.topic()]
+            data = normalize(_map, decoded_msg)
+            tracker_msg = TrackerMessage(attr.asdict(data))
             if msg.topic() == config.VALIDATION_TOPIC:
-                tracker_msg = msgs.create_msg(data, "received", "received validation response")
-                send_message(config.TRACKER_TOPIC, tracker_msg)
-                if data.get("validation") == "success":
-                    send_message(config.ANNOUNCER_TOPIC, data)
-                    tracker_msg = msgs.create_msg(data, "success", f"announced to {config.ANNOUNCER_TOPIC}")
-                    send_message(config.TRACKER_TOPIC, tracker_msg)
-                elif data.get("validation") == "failure":
-                    aws.copy(data["request_id"], config.STAGE_BUCKET, config.REJECT_BUCKET, data["request_id"])
-                    tracker_msg = msgs.create_msg(
-                        data, "success", "copied failed payload to reject bucket"
+                send_message(
+                    config.TRACKER_TOPIC,
+                    tracker_msg.message("received", "received validation response"),
+                    data.request_id,
+                )
+                result = handle_validation(data)
+                if result == "success":
+                    send_message(config.ANNOUNCER_TOPIC, decoded_msg, data.request_id)
+                    send_message(
+                        config.TRACKER_TOPIC,
+                        tracker_msg.message(
+                            "success", f"announced to {config.ANNOUNCER_TOPIC}"
+                        ),
+                        data.request_id,
                     )
-                    send_message(config.TRACKER_TOPIC, tracker_msg)
+                elif result == "failure":
+                    aws.copy(
+                        data.request_id,
+                        config.STAGE_BUCKET,
+                        config.REJECT_BUCKET,
+                        data.request_id,
+                        data.size,
+                        data.service,
+                    )
+                    send_message(
+                        config.TRACKER_TOPIC,
+                        tracker_msg.message(
+                            "success",
+                            f"copied failed payload to {config.REJECT_BUCKET}",
+                        ),
+                        data.request_id,
+                    )
                 else:
-                    logger.error("Invalid validation response")
-                    metrics.invalid_validation_status.labels(service=data.get("service")).inc()
-                    tracker_msg = msgs.create_msg(data, "error", f"invalid validation response: {data.get('validation')}")
-                    send_message(config.TRACKER_TOPIC, tracker_msg)
-            elif msg.topic() == config.STORAGE_TOPIC:
-                key, bucket = get_key(data, bucket_map)
-                if key != "pass":
-                    aws.copy(data["request_id"], config.STAGE_BUCKET, bucket, key)
-                    metrics.payload_size.labels(service=data.get("service")).observe(data.get("size"))
+                    logger.error(f"Invalid validation response: {data.validation}")
+                    metrics.invalid_validation_status.labels(service=data.service).inc()
+                    send_message(
+                        config.TRACKER_TOPIC,
+                        tracker_msg.message(
+                            "error", f"invalid validation response: {data.validation}"
+                        ),
+                        data.request_id,
+                    )
             else:
-                announce(data)
+                key, bucket = handle_bucket(_map, data)
+                aws.copy(
+                    data.request_id,
+                    config.STAGE_BUCKET,
+                    bucket,
+                    key,
+                    data.size,
+                    data.service,
+                )
         except Exception:
             metrics.message_json_unpack_error.labels(topic=msg.topic()).inc()
-            logger.exception("An error occurred during message processing")
+            logger.exception("An error occured during message processing")
 
         consumer.commit()
         producer.flush()
 
-    consumer.close()
+    consumer.commit()
     producer.flush()
 
 
-def delivery_report(err, msg=None, request_id=None):
-    """
-    Callback function for produced messages
-    """
-    if err is not None:
-        logger.error(
-            "Message delivery for topic %s failed for request_id [%s]: %s",
-            msg.topic(),
-            err,
-            request_id
-        )
-        logger.info("Message contents: %s", json.loads(msg.value().decode("utf-8")))
-        metrics.message_publish_error.inc()
+def normalize(_map, decoded_msg):
+    normalizer = getattr(normalizers, _map["normalizer"])
+    data = normalizer.from_json(decoded_msg)
+    return data
+
+
+def handle_validation(data):
+    if data.validation == "success":
+        return "success"
+    elif data.validation == "failure":
+        return "failure"
     else:
-        logger.info(
-            "Message delivered to %s [%s] for request_id [%s]",
-            msg.topic(),
-            msg.partition(),
-            request_id,
-        )
-        logger.info("Message contents: %s", json.loads(msg.value().decode("utf-8")))
-        metrics.message_publish_count.inc()
+        return "invalid"
 
 
-@metrics.get_key_time.time()
-def get_key(msg, bucket_map):
-    """
-    Get the key that will be used when transferring file to the new bucket
-    """
-    key_map = KeyMap.from_json(msg)
-
-    if msg["service"] in bucket_map.keys():
-        service = msg["service"]
-        ident = key_map.identity()
-        key_map.org_id = ident["identity"]["internal"].get("org_id")
-        key_map.account = ident["identity"]["account_number"]
-        if ident["identity"].get("system"):
-            key_map.cluster_id = ident["identity"]["system"].get("cluster_id")
-        formatter = bucket_map[service]["format"]
-        key = formatter.format(**key_map.__dict__)
-        bucket = bucket_map[service]["bucket"]
-    else:
-        key = "pass"
-        bucket = "pass"
-
-    return key, bucket
+def handle_bucket(_map, data):
+    try:
+        formatter = _map["services"][data.service]["format"]
+        key = formatter.format(**attr.asdict(data))
+        bucket = _map["services"][data.service]["bucket"]
+        return key, bucket
+    except Exception:
+        logger.exception("Unable to find bucket map for %s", data.service)
 
 
 # This is is a way to support legacy uploads that are expected to be on the
@@ -158,25 +177,26 @@ def announce(msg):
     if msg["host"].get("system_profile"):
         del msg["host"]["system_profile"]
     available_message = {**msg, **platform_metadata}
-    tracker_msg = msgs.create_msg(
-        available_message, "received", "received egress message"
+    send_message(config.ANNOUNCER_TOPIC, json.dumps(available_message))
+    tracker_msg = TrackerMessage(available_message)
+    send_message(
+        config.TRACKER_TOPIC,
+        tracker_msg.message("success", f"sent message to {config.ANNOUNCER_TOPIC}"),
+        available_message["request_id"],
     )
-    send_message(config.TRACKER_TOPIC, tracker_msg)
-    send_message(config.ANNOUNCER_TOPIC, available_message)
-    tracker_msg = msgs.create_msg(
-        available_message, "success", f"sent message to {config.ANNOUNCER_TOPIC}"
-    )
-    send_message(config.TRACKER_TOPIC, tracker_msg)
 
 
-def send_message(topic, msg):
+def send_message(topic, msg, request_id=None):
     try:
         producer.poll(0)
-        _bytes = json.dumps(msg, ensure_ascii=False).encode("utf-8")
-        producer.produce(topic, _bytes, callback=partial(delivery_report, request_id=msg.get("request_id")))
+        producer.produce(
+            topic, msg, callback=partial(produce.delivery_report, request_id=request_id)
+        )
     except KafkaError:
         logger.exception(
-            "Unable to topic [%s] for request id [%s]", topic, msg.get("request_id")
+            "Unable to produce to topic [%s] for request id [%s]",
+            topic,
+            msg.get("request_id"),
         )
 
 
