@@ -10,8 +10,8 @@ logger = logging.getLogger(config.APP_NAME)
 
 class TrackerMessage(object):
     def __init__(self, data):
-        self.service = data["service"]
-        self.account = data["account"]
+        self.service = data.get("service")
+        self.account = data.get("account")
         if data.get("host"):
             self.inventory_id = data.get("id")
         else:
