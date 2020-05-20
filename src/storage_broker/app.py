@@ -182,7 +182,7 @@ def announce(msg):
     send_message(
         config.TRACKER_TOPIC,
         tracker_msg.message("success", f"sent message to {config.ANNOUNCER_TOPIC}"),
-        available_message["request_id"],
+        available_message.get("request_id"),
     )
 
 
