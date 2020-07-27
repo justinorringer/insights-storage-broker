@@ -24,7 +24,7 @@ class Validation(object):
     def from_json(cls, doc):
         try:
             validation = doc["validation"]
-            service = doc["service"]
+            service = doc.get("service")
             request_id = doc.get("request_id", str(uuid.uuid4().hex))
             size = doc.get("size")
             return cls(
