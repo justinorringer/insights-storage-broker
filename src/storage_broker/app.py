@@ -107,6 +107,7 @@ def main():
 
         metrics.message_consume_count.inc()
         if msg.topic() == config.EGRESS_TOPIC:
+            logger.debug(msg)
             headers = dict(msg.headers())
             if headers['event_type'] in ('updated', 'created'):
                 announce(decoded_msg)
