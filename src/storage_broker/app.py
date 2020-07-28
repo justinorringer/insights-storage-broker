@@ -46,7 +46,7 @@ def handle_failure(msg, decoded_msg, data, tracker_msg):
 
     track(tracker_msg.message("received", "received validation response"))
     if data.validation == "success":
-        send_message(config.ANNOUNCER_TOPIC, decoded_msg, data.request_id)
+        send_message(config.ANNOUNCER_TOPIC, json.dumps(decoded_msg), data.request_id)
         track(tracker_msg.message("success", f"announced to {config.ANNOUNCER_TOPIC}"))
         return
 
@@ -107,7 +107,8 @@ def main():
 
         metrics.message_consume_count.inc()
         if msg.topic() == config.EGRESS_TOPIC:
-            announce(decoded_msg)
+            if decoded_msg['type'] in ('updated', 'created'):
+                announce(decoded_msg)
             continue
 
         try:
