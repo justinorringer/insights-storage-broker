@@ -163,7 +163,10 @@ def announce(msg):
     msg["id"] = msg["host"].get("id")
     if msg["host"].get("system_profile"):
         del msg["host"]["system_profile"]
-    available_message = {**msg, **platform_metadata}
+    if platform_metadata is not None:
+        available_message = {**msg, **platform_metadata}
+    else:
+        available_message = msg
     send_message(config.ANNOUNCER_TOPIC, json.dumps(available_message))
     tracker_msg = TrackerMessage(available_message)
     send_message(
