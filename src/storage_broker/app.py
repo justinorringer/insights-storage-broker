@@ -46,7 +46,7 @@ def handle_failure(msg, decoded_msg, data, tracker_msg):
 
     track(tracker_msg.message("received", "received validation response"))
     if data.validation == "success":
-        send_message(config.ANNOUNCER_TOPIC, decoded_msg, data.request_id)
+        send_message(config.ANNOUNCER_TOPIC, json.dumps(decoded_msg), data.request_id)
         track(tracker_msg.message("success", f"announced to {config.ANNOUNCER_TOPIC}"))
         return
 
