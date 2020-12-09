@@ -63,6 +63,8 @@ objects:
     objectStore:
       - ${PERM_BUCKET}
       - ${REJECT_BUCKET}
+      - ${OPENSHIFT_BUCKET}
+      - ${ANSIBLE_BUCKET}
     kafkaTopics:
       - replicas: 3
         partitions: 24
@@ -92,10 +94,10 @@ objects:
         services:
           openshift:
             format: "{org_id}/{cluster_id}/{timestamp}-{request_id}"
-            bucket: "insights-buck-it-openshift"
+            bucket: ${OPENSHIFT_BUCKET}
           ansible:
             format: "{org_id}/{cluster_id}/{timestamp}-{request_id}"
-            bucket: "insights-buck-it-ansible"
+            bucket: ${ANSIBLE_BUCKET}
   
 parameters:
 - description: Minimum number of replicas required
@@ -131,3 +133,9 @@ parameters:
 - description: Reject Bucket
   name: REJECT_BUCKET
   value: "insights-dev-upload-rejected"
+- description: openshift ccx bucket
+  name: OPENSHIFT_BUCKET
+  value: "insights-buck-it-openshift"
+- description: ansible tower bucket
+  name: ANSIBLE_BUCKET
+  value: "insights-buck-it-ansible"
