@@ -4,6 +4,6 @@ COPY setup.py .
 COPY default_map.yaml .
 RUN pip3 install --upgrade pip setuptools && pip3 install .
 USER 0
-RUN yum remove -y npm nodejs kernel-headers
+RUN yum remove -y npm nodejs kernel-headers && yum update -y && yum clean all
 USER 1001
 ENTRYPOINT ["storage_broker"]
