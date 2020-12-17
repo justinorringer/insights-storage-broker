@@ -60,6 +60,8 @@ objects:
             value: ${PERM_BUCKET}
           - name: REJECT_BUCKET
             value: ${REJECT_BUCKET}
+          - name: BUCKET_MAP_FILE
+            value: ${BUCKET_MAP_FILE}
     objectStore:
       - ${PERM_BUCKET}
       - ${REJECT_BUCKET}
@@ -139,3 +141,6 @@ parameters:
 - description: ansible tower bucket
   name: ANSIBLE_BUCKET
   value: "insights-buck-it-ansible"
+- description: bucket config map location
+  name: BUCKET_MAP_FILE
+  value: "/var/config.yaml"
