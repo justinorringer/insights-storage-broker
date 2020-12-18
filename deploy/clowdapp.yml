@@ -158,4 +158,4 @@ parameters:
   value: "/var/config.yaml"
 - description: policy based key
   name: POLICY_BASED_KEY
-  value: "insights-buckets-read-write"
+  value: "ingress-buckets-read-write"
