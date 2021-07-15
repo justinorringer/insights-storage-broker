@@ -56,7 +56,7 @@ def initialize_logging():
         import watchtower
 
         boto3_session = Session(aws_access_key_id=aws_access_key_id,
-                                aws_secret_access_id=aws_secret_access_key,
+                                aws_secret_access_key=aws_secret_access_key,
                                 region_name=aws_region_name)
 
         cw_handler = watchtower.CloudWatchLogHandler(boto3_session=boto3_session,
