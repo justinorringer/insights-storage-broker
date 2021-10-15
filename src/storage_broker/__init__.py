@@ -34,6 +34,7 @@ class TrackerMessage(object):
 class NotificationMessage(object):
     def __init__(self, data):
         self.bundle = "rhel"
+        self.event_type = "upload-rejected"
         self.application = data.get("service")
         self.account = data.get("account")
 
