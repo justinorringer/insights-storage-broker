@@ -5,7 +5,7 @@ def get_time():
     return datetime.datetime.now().isoformat()
 
 
-def create_msg(data, status, status_msg):
+def tracker_msg(data, status, status_msg):
     msg = {
         "service": "insights-storage-broker",
         "account": data.get("account"),

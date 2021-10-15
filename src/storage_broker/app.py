@@ -6,7 +6,7 @@ import attr
 import yaml
 from confluent_kafka import KafkaError
 from prometheus_client import start_http_server
-from src.storage_broker import TrackerMessage, normalizers
+from src.storage_broker import NotificationMessage, TrackerMessage, normalizers
 from src.storage_broker.mq import consume, produce
 from src.storage_broker.storage import aws
 from src.storage_broker.utils import broker_logging, config, metrics
@@ -45,15 +45,22 @@ def handle_signal(signal, frame):
 signal.signal(signal.SIGTERM, handle_signal)
 
 
-def handle_failure(msg, decoded_msg, data, tracker_msg):
+def handle_failure(msg, decoded_msg, data, tracker_msg, notification_msg):
     def track(m):
         send_message(config.TRACKER_TOPIC, m, request_id=data.request_id)
+
+    def notify(m):
+        send_message(config.NOTIFICATION_TOPIC, m, request_id=data.request_id)
 
     track(tracker_msg.message("received", "received validation response"))
     if data.validation == "success":
         send_message(config.ANNOUNCER_TOPIC, json.dumps(decoded_msg), data.request_id)
         track(tracker_msg.message("success", f"announced to {config.ANNOUNCER_TOPIC}"))
         return
+
+    event = [{"metadata": {}, "payload": {"request_id": data.request_id, "service": data.service, "machine_id": data.machine_id, "hostname": data.hostname}}]
+    context = {"validation": "failure", "platform_rejected": "true"}
+    notify(notification_msg.message(event, context))
 
     if data.validation == "failure":
         aws.copy(
@@ -124,8 +131,11 @@ def main():
             _map = bucket_map[msg.topic()]
             data = normalize(_map, decoded_msg)
             tracker_msg = TrackerMessage(attr.asdict(data))
+            notification_msg = None
+            if config.NOTIFICATION_TOPIC:
+                notification_msg = NotificationMessage(attr.asdict(data))
             if msg.topic() == config.VALIDATION_TOPIC:
-                handle_failure(msg, decoded_msg, data, tracker_msg)
+                handle_failure(msg, decoded_msg, data, tracker_msg, notification_msg)
             else:
                 key, bucket = handle_bucket(_map, data)
                 aws.copy(

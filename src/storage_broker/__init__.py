@@ -29,3 +29,21 @@ class TrackerMessage(object):
             return _bytes
         except Exception:
             logger.exception("Unable to encode tracker JSON")
+
+
+class NotificationMessage(object):
+    def __init__(self, data):
+        self.bundle = "rhel"
+        self.application = data.get("service")
+        self.account = data.get("account")
+
+    def message(self, event, context):
+        self.event = event
+        self.context = context
+        self.timestamp = datetime.strptime(datetime.now().isoformat(), "%Y-%m-%dT%H:%M:%S.%f").isoformat()[:-7] + "Z"
+
+        try:
+            _bytes = json.dumps(self.__dict__, ensure_ascii=False).encode("utf-8")
+            return _bytes
+        except Exception:
+            logger.exception("Unable to encode notification JSON")

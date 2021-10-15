@@ -19,6 +19,8 @@ class Validation(object):
     service = attr.ib(default=None)
     request_id = attr.ib(default=str(uuid.uuid4().hex))
     size = attr.ib(default=None)
+    machine_id = attr.ib(default=None)
+    hostname = attr.ib(default=None)
 
     @classmethod
     def from_json(cls, doc):
@@ -27,8 +29,12 @@ class Validation(object):
             service = doc.get("service")
             request_id = doc.get("request_id", str(uuid.uuid4().hex))
             size = doc.get("size")
+            if doc.get("platform_metadata"):
+                machine_id = doc["platform_metadata"].get("machine_id")
+                hostname = doc["platform_metadata"].get("hostname")
+
             return cls(
-                validation=validation, service=service, request_id=request_id, size=size
+                validation=validation, service=service, request_id=request_id, size=size, machine_id=machine_id, hostname=hostname
             )
         except Exception:
             logger.exception("Unable to deserialize JSON: %s", doc)

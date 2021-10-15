@@ -41,6 +41,7 @@ if os.getenv("ACG_CONFIG"):
     STORAGE_TOPIC = KafkaTopics["platform.upload.buckit"].name
     EGRESS_TOPIC = KafkaTopics["platform.inventory.events"].name
     TRACKER_TOPIC = KafkaTopics["platform.payload-status"].name
+    NOTIFICATION_TOPIC = KafkaTopics["platform.notifications.ingress"].name
     BOOTSTRAP_SERVERS = f"{KAFKA_BROKER.hostname}:{KAFKA_BROKER.port}"
     # S3
     AWS_ACCESS_KEY_ID = cfg.objectStore.accessKey
@@ -64,6 +65,7 @@ else:
     STORAGE_TOPIC = os.getenv("STORAGE_TOPIC", "platform.upload.buckit")
     EGRESS_TOPIC = os.getenv("EGRESS_TOPIC", "platform.inventory.events")
     TRACKER_TOPIC = os.getenv("TRACKER_TOPIC", "platform.payload-status")
+    NOTIFICATION_TOPIC = os.getenv("NOTIFICATION_TOPIC", "platform.notifications.ingress")
     BOOTSTRAP_SERVERS = os.getenv("BOOTSTRAP_SERVERS", "kafka:29092").split()
     # S3
     AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", None)
