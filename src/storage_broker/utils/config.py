@@ -40,6 +40,7 @@ if os.getenv("ACG_CONFIG"):
     ANNOUNCER_TOPIC = KafkaTopics["platform.upload.available"].name
     STORAGE_TOPIC = KafkaTopics["platform.upload.buckit"].name
     EGRESS_TOPIC = KafkaTopics["platform.inventory.events"].name
+    NOTIFICATIONS_TOPIC = KafkaTopics["platform.notifications.ingress"].name
     TRACKER_TOPIC = KafkaTopics["platform.payload-status"].name
     BOOTSTRAP_SERVERS = f"{KAFKA_BROKER.hostname}:{KAFKA_BROKER.port}"
     # S3
@@ -63,6 +64,7 @@ else:
     ANNOUNCER_TOPIC = os.getenv("ANNOUNCER_TOPIC", "platform.upload.available")
     STORAGE_TOPIC = os.getenv("STORAGE_TOPIC", "platform.upload.buckit")
     EGRESS_TOPIC = os.getenv("EGRESS_TOPIC", "platform.inventory.events")
+    NOTIFICATIONS_TOPIC = os.getenv("NOTIFICATIONS_TOPIC", "platform.notifications.ingress")
     TRACKER_TOPIC = os.getenv("TRACKER_TOPIC", "platform.payload-status")
     BOOTSTRAP_SERVERS = os.getenv("BOOTSTRAP_SERVERS", "kafka:29092").split()
     # S3

@@ -112,6 +112,9 @@ objects:
       - replicas: 3
         partitions: 4
         topicName: platform.logging.logs
+      - replicas: 3
+        partitions: 3
+        topicName: platform.notifications.ingress
 - apiVersion: v1
   kind: ConfigMap
   metadata:

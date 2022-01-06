@@ -7,7 +7,7 @@ import yaml
 from confluent_kafka import KafkaError
 from prometheus_client import start_http_server
 from src.storage_broker import TrackerMessage, normalizers
-from src.storage_broker.mq import consume, produce
+from src.storage_broker.mq import consume, produce, msgs
 from src.storage_broker.storage import aws
 from src.storage_broker.utils import broker_logging, config, metrics
 
@@ -69,6 +69,9 @@ def handle_failure(msg, decoded_msg, data, tracker_msg):
                 "success", f"copied failed payload to {config.REJECT_BUCKET}"
             )
         )
+        if data.reason:
+            message = msgs.notification_msg(data)
+            send_message(config.NOTIFICATIONS_TOPIC, json.dumps(message), data.request_id)
         return
 
     logger.error(f"Invalid validation response: {data.validation}")
