@@ -19,7 +19,7 @@ class Validation(object):
     service = attr.ib(default=None)
     request_id = attr.ib(default=str(uuid.uuid4().hex))
     reason = attr.ib(default=None)
-    account = attr.ib(defaul=None)
+    account = attr.ib(default=None)
     reporter = attr.ib(default=None)
     system_id = attr.ib(default=None)
     hostname = attr.ib(default=None)
