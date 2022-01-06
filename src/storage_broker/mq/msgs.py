@@ -1,4 +1,5 @@
 import datetime
+import json
 
 
 def get_time():
@@ -30,15 +31,13 @@ def notification_msg(data):
         "events": [
             {
                 "metadata": {},
-                "payload": """{\n
-                    \"request_id\": \"{0}\",\n
-                    \"reason\": \"{1}\",\n
-                    \"system_id\": \"{2}\",\n
-                    \"hostname\": \"{3}\",\n
-                    \"reporter\": \"{4}\"\n
-            }""".format(data.request_id, data.reason,
-                        data.system_id, data.hostname,
-                        data.reporter),
+                "payload": json.dumps({
+                    "request_id": data.request_id,
+                    "reason": data.reason,
+                    "system_id": data.system_id,
+                    "hostname": data.hostname,
+                    "reporter": data.reporter,
+                })
             }
         ],
         "context": "{}",
