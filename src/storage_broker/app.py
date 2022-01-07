@@ -1,6 +1,7 @@
 import json
 import signal
 from functools import partial
+from uuid import uuid4
 
 import attr
 import yaml
@@ -70,8 +71,9 @@ def handle_failure(msg, decoded_msg, data, tracker_msg):
             )
         )
         if data.reason:
+            notification_id = uuid4().hex.encode('utf-8')
             message = msgs.notification_msg(data)
-            send_message(config.NOTIFICATIONS_TOPIC, json.dumps(message), data.request_id)
+            send_message(config.NOTIFICATIONS_TOPIC, json.dumps(message), data.request_id, headers=[("rh-message-id", notification_id)])
         return
 
     logger.error(f"Invalid validation response: {data.validation}")
@@ -188,11 +190,11 @@ def announce(msg):
     )
 
 
-def send_message(topic, msg, request_id=None):
+def send_message(topic, msg, request_id=None, headers=None):
     try:
         producer.poll(0)
         producer.produce(
-            topic, msg, callback=partial(produce.delivery_report, request_id=request_id)
+            topic, msg, headers=headers, callback=partial(produce.delivery_report, request_id=request_id)
         )
     except KafkaError:
         logger.exception(
