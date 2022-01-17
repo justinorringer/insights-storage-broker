@@ -23,7 +23,7 @@ def create_msg(data, status, status_msg):
 def notification_msg(data):
     msg = {
         "version": "v1.1.0",
-        "bundle": "rhel",
+        "bundle": "console",
         "application": "storage-broker",
         "event_type": "upload_rejection",
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
