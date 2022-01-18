@@ -25,7 +25,7 @@ def notification_msg(data):
         "version": "v1.1.0",
         "bundle": "console",
         "application": "storage-broker",
-        "event_type": "upload_rejection",
+        "event_type": "upload-rejection",
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
         "account": data.account,
         "events": [
