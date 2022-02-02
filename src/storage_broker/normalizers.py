@@ -18,6 +18,11 @@ class Validation(object):
     validation = attr.ib(default=None)
     service = attr.ib(default=None)
     request_id = attr.ib(default=str(uuid.uuid4().hex))
+    reason = attr.ib(default=None)
+    account = attr.ib(default=None)
+    reporter = attr.ib(default=None)
+    system_id = attr.ib(default=None)
+    hostname = attr.ib(default=None)
     size = attr.ib(default=None)
 
     @classmethod
@@ -26,9 +31,16 @@ class Validation(object):
             validation = doc["validation"]
             service = doc.get("service")
             request_id = doc.get("request_id", str(uuid.uuid4().hex))
+            reason = doc.get("reason")
+            account = doc.get("account")
+            reporter = doc.get("reporter")
+            system_id = doc.get("system_id")
+            hostname = doc.get("hostname")
             size = doc.get("size")
             return cls(
-                validation=validation, service=service, request_id=request_id, size=size
+                validation=validation, service=service, request_id=request_id,
+                reason=reason, reporter=reporter, system_id=system_id,
+                hostname=hostname, account=account, size=size
             )
         except Exception:
             logger.exception("Unable to deserialize JSON: %s", doc)
