@@ -13,6 +13,7 @@ class TrackerMessage(object):
     def __init__(self, data):
         self.service = "storage-broker"
         self.account = data.get("account")
+        self.org_id = data.get("org_id")
         self.request_id = data.get("request_id", str(uuid.uuid4().hex))
         if data.get("host"):
             self.inventory_id = data.get("id")

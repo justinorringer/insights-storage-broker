@@ -9,6 +9,11 @@ from base64 import b64decode
 logger = logging.getLogger(__name__)
 
 
+def parse_identity(b64_identity):
+    ident = json.loads(b64decode(b64_identity).decode("utf-8"))
+    return ident
+
+
 @attr.s
 class Validation(object):
     """
@@ -20,19 +25,29 @@ class Validation(object):
     request_id = attr.ib(default=str(uuid.uuid4().hex))
     reason = attr.ib(default=None)
     account = attr.ib(default=None)
+    org_id = attr.ib(default=None)
     reporter = attr.ib(default=None)
     system_id = attr.ib(default=None)
     hostname = attr.ib(default=None)
     size = attr.ib(default=None)
 
+
     @classmethod
     def from_json(cls, doc):
         try:
+            # default dictionary in case we don't have an identity
+            ident = {"identity": {"account": None,
+                                  "internal": {"org_id": None}
+                                  }
+                     }
+            if doc.get("b64_identity"):
+                ident = parse_identity(doc["b64_identity"])
             validation = doc["validation"]
             service = doc.get("service")
             request_id = doc.get("request_id", str(uuid.uuid4().hex))
             reason = doc.get("reason")
-            account = doc.get("account")
+            account = doc.get("account") if doc.get("account") else ident["identity"]["account_number"]
+            org_id = doc.get("org_id") if doc.get("org_id") else ident["identity"]["internal"]["org_id"]
             reporter = doc.get("reporter")
             system_id = doc.get("system_id")
             hostname = doc.get("hostname")
@@ -40,7 +55,7 @@ class Validation(object):
             return cls(
                 validation=validation, service=service, request_id=request_id,
                 reason=reason, reporter=reporter, system_id=system_id,
-                hostname=hostname, account=account, size=size
+                hostname=hostname, account=account, org_id=org_id, size=size
             )
         except Exception:
             logger.exception("Unable to deserialize JSON: %s", doc)
@@ -60,7 +75,7 @@ class Openshift(object):
     @classmethod
     def from_json(cls, doc):
         try:
-            ident = json.loads(b64decode(doc["b64_identity"]).decode("utf-8"))
+            ident = parse_identity(doc["b64_identity"])
             if ident["identity"].get("system"):
                 cluster_id = ident["identity"]["system"].get("cluster_id")
             org_id = ident["identity"]["internal"].get("org_id")
