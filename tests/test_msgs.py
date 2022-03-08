@@ -7,6 +7,7 @@ from storage_broker.normalizers import Validation
 
 MSG = {
     "account": "000001",
+    "org_id": "123456",
     "reporter": "puptoo",
     "request_id": "12345",
     "system_id": "abdc-1234",
@@ -22,6 +23,7 @@ def test_validation_normalizer():
     normalizer = Validation()
     data = normalizer.from_json(MSG)
     assert data.account == "000001"
+    assert data.org_id == "123456"
 
 
 def test_notification_msg():
@@ -30,9 +32,9 @@ def test_notification_msg():
     msg = notification_msg(data)
     assert type(msg["events"][0]["payload"]) == str
     assert msg["version"] == "v1.1.0"
-    assert msg["bundle"] == "rhel"
-    assert msg["application"] == "validation"
-    assert msg["event_type"] == "upload_rejection"
+    assert msg["bundle"] == "console"
+    assert msg["application"] == "storage-broker"
+    assert msg["event_type"] == "upload-rejection"
     assert msg["account"] == "000001"
     assert msg["events"][0]["metadata"] == {}
 
