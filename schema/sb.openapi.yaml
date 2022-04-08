@@ -32,6 +32,8 @@ components:
           $ref: '#/components/schemas/RequestId'
         url:
           $ref: '#/components/schemas/Url'
+        timeout:
+          $ref: '#/components/schemas/Timeout'
       required:
       - request_id
       - url
@@ -45,6 +47,11 @@ components:
       description: AWS archive download url for a payload.
       type: string
       format: url
+
+    Timeout:
+      description: AWS download url timeout.
+      type: string
+      format: date-time
 
     Error:
       type: object
