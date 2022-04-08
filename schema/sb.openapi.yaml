@@ -6,7 +6,7 @@ info:
   version: 1.0.0
 
 paths:
-  /archive/fetch:
+  /archive/url:
     get:
       summary: Returns archive download url
       description: Fetches an archive download url from AWS.
