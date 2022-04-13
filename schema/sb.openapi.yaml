@@ -37,6 +37,7 @@ components:
       required:
       - request_id
       - url
+      - timeout
 
     RequestId:
       description: The request id of a payload.
