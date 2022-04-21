@@ -1,10 +1,16 @@
+from socket import timeout
+from time import time
 import uuid
+from datetime import datetime, timezone, timedelta
 from flask import Flask, request, jsonify
 
+from src.storage_broker.storage import aws
 from src.storage_broker.utils import broker_logging, config
+
 
 app = Flask(__name__)
 logger = broker_logging.initialize_logging()
+
 
 @app.route("/archive/url/", methods=['GET'])
 def get_archive_url():    
@@ -17,9 +23,19 @@ def get_archive_url():
     except ValueError:
         return error_message('invalid request_id'), 400
 
-    sample_response = {"request_id": request_id, "url": "https://example.com/", "timeout": "2022-04-14T19:58:51.598Z"}
+    key_check_exception = aws.check_key(config.STAGE_BUCKET, request_id)
+    if key_check_exception:
+        client_error_msg, error_code = key_check_exception.response["Error"]["Message"], key_check_exception.response["Error"]["Code"]
+        return error_message(f"{client_error_msg} - {error_code}"), 400
 
-    return jsonify(sample_response)
+    url = aws.get_url(config.STAGE_BUCKET, request_id, config.API_URL_EXPIRY)
+
+    timeout = datetime.utcnow() + timedelta(seconds=config.API_URL_EXPIRY)
+    timeout_str = str(timeout.replace(microsecond=0, tzinfo=timezone.utc).isoformat())
+
+    response = {"request_id": request_id, "url": url, "timeout": timeout_str}
+
+    return jsonify(response)
 
 
 def main():
