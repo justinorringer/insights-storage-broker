@@ -26,7 +26,7 @@ def init_consumer(logger):
                    "sasl.password": config.KAFKA_BROKER.sasl.password
                })
 
-       logger.degub("Kafka connection info: %s", connection_info)
+       logger.debug("Kafka connection info: %s", connection_info)
        consumer = Consumer(connection_info)
        logger.debug("Connected to consumer")
 
