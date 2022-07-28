@@ -11,6 +11,7 @@ COPY poetry.lock poetry.lock
 COPY pyproject.toml pyproject.toml
 
 COPY default_map.yaml /opt/app-root/src/default_map.yaml
+COPY rhosak_map.yaml /opt/app-root/src/rhosak_map.yaml
 
 RUN pip3 install --upgrade pip && pip3 install .
 
