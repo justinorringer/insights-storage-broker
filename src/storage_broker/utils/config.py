@@ -27,16 +27,13 @@ def get_namespace():
         logger.info("Not running in openshift")
 
 
-def load_bucket_map(_file, topics=None):
+def load_bucket_map(_file):
     try:
         with open(_file, "rb") as f:
             bucket_map = yaml.safe_load(f)
     except Exception as e:
         logger.exception(e)
         bucket_map = {}
-
-    if topics:
-        bucket_map = clowderize_bucket_map(bucket_map, topics)
 
     return bucket_map
 
@@ -61,7 +58,7 @@ if os.getenv("ACG_CONFIG"):
 
     cfg = LoadedConfig
     KAFKA_BROKER = cfg.kafka.brokers[0]
-    BUCKET_MAP = load_bucket_map(BUCKET_MAP_FILE, topics=KafkaTopics)
+    BUCKET_MAP = clowderize_bucket_map(load_bucket_map(BUCKET_MAP_FILE), topics=KafkaTopics)
     VALIDATION_TOPIC = KafkaTopics["platform.upload.validation"].name
     STORAGE_TOPIC = KafkaTopics["platform.upload.buckit"].name
     EGRESS_TOPIC = KafkaTopics["platform.inventory.events"].name
