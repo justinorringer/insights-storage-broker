@@ -58,7 +58,7 @@ if os.getenv("ACG_CONFIG"):
 
     cfg = LoadedConfig
     KAFKA_BROKER = cfg.kafka.brokers[0]
-    BUCKET_MAP = clowderize_bucket_map(load_bucket_map(BUCKET_MAP_FILE), topics)
+    BUCKET_MAP = clowderize_bucket_map(load_bucket_map(BUCKET_MAP_FILE), KafkaTopics)
     VALIDATION_TOPIC = KafkaTopics["platform.upload.validation"].name
     STORAGE_TOPIC = KafkaTopics["platform.upload.buckit"].name
     EGRESS_TOPIC = KafkaTopics["platform.inventory.events"].name
