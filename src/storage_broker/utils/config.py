@@ -1,7 +1,9 @@
 import os
 import logging
+import yaml
 
 APP_NAME = os.getenv("APP_NAME", "insights-storage-broker")
+BUCKET_MAP_FILE = os.getenv("BUCKET_MAP_FILE", "/opt/app-root/src/default_map.yaml")
 
 logger = logging.getLogger(APP_NAME)
 
@@ -25,6 +27,26 @@ def get_namespace():
         logger.info("Not running in openshift")
 
 
+def load_bucket_map(_file):
+    try:
+        with open(_file, "rb") as f:
+            bucket_map = yaml.safe_load(f)
+    except Exception as e:
+        logger.exception(e)
+        bucket_map = {}
+
+    return bucket_map
+
+def clowderize_bucket_map(bucket_map, topics):
+    """
+    Convert the bucket map to use clowder derived topic names
+    """
+    clowderized_map = {}
+    for topic, bucket_info in bucket_map.items():
+        clowderized_map[topics[topic].name] = bucket_info
+
+    return clowderized_map
+
 # Inventory
 INVENTORY_URL = os.getenv(
     "INVENTORY_URL", "http://insights-inventory:8080/api/inventory/v1/hosts"
@@ -36,6 +58,7 @@ if os.getenv("ACG_CONFIG"):
 
     cfg = LoadedConfig
     KAFKA_BROKER = cfg.kafka.brokers[0]
+    BUCKET_MAP = clowderize_bucket_map(load_bucket_map(BUCKET_MAP_FILE), KafkaTopics)
     VALIDATION_TOPIC = KafkaTopics["platform.upload.validation"].name
     STORAGE_TOPIC = KafkaTopics["platform.upload.buckit"].name
     EGRESS_TOPIC = KafkaTopics["platform.inventory.events"].name
@@ -64,6 +87,7 @@ if os.getenv("ACG_CONFIG"):
     API_PORT = int(os.getenv("API_PORT", cfg.publicPort))
 else:
     KAFKA_BROKER = None
+    BUCKET_MAP = load_bucket_map(BUCKET_MAP_FILE)
     VALIDATION_TOPIC = os.getenv("CONSUME_TOPIC", "platform.upload.validation")
     STORAGE_TOPIC = os.getenv("STORAGE_TOPIC", "platform.upload.buckit")
     EGRESS_TOPIC = os.getenv("EGRESS_TOPIC", "platform.inventory.events")
@@ -97,7 +121,6 @@ AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", AWS_ACCESS_KEY_ID)
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", AWS_SECRET_ACCESS_KEY)
 
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
-BUCKET_MAP_FILE = os.getenv("BUCKET_MAP_FILE", "/opt/app-root/src/default_map.yaml")
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 NAMESPACE = get_namespace()

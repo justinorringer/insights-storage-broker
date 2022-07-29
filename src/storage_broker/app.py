@@ -4,7 +4,6 @@ from functools import partial
 from uuid import uuid4
 
 import attr
-import yaml
 from confluent_kafka import KafkaError
 from prometheus_client import start_http_server
 from threading import Event
@@ -26,17 +25,6 @@ def start_prometheus():
 def write_cert(cert):
     with open("/tmp/cacert.pem", "w") as f:
         f.write(cert)
-
-
-def load_bucket_map(_file):
-    try:
-        with open(_file, "rb") as f:
-            bucket_map = yaml.safe_load(f)
-    except Exception as e:
-        logger.exception(e)
-        bucket_map = {}
-
-    return bucket_map
 
 
 def handle_signal(signal, frame):
@@ -95,7 +83,7 @@ def main(exit_event=event):
         if config.KAFKA_BROKER.cacert:
             write_cert(config.KAFKA_BROKER.cacert)
 
-    bucket_map = load_bucket_map(config.BUCKET_MAP_FILE)
+    bucket_map = config.BUCKET_MAP
 
     consumer = consume.init_consumer(logger)
     global producer
