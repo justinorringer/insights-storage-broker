@@ -34,6 +34,18 @@ def handle_signal(signal, frame):
 signal.signal(signal.SIGTERM, handle_signal)
 
 
+def service_check(msg):
+    """
+    Check if the service header in the message contains a monitored
+    service
+    """
+    service = dict(msg.headers() or []).get('service')
+    if service:
+        service = service.decode('utf-8')
+        return service in config.MONITORED_SERVICES
+    return False
+
+
 def handle_failure(data, tracker_msg):
     def track(m):
         send_message(config.TRACKER_TOPIC, m, request_id=data.request_id)
@@ -99,6 +111,9 @@ def main(exit_event=event):
         if msg.error():
             metrics.message_consume_error_count.inc()
             logger.error("Consumer error: %s", msg.error())
+            continue
+
+        if msg.topic() != config.EGRESS_TOPIC and not service_check(msg):
             continue
 
         try:
