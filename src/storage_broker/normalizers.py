@@ -79,6 +79,7 @@ class Openshift(object):
 
     @classmethod
     def from_json(cls, doc):
+        cluster_id = None
         try:
             ident = parse_identity(doc["b64_identity"])
             if ident["identity"].get("system"):
