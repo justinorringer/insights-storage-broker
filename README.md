@@ -59,30 +59,6 @@ added as attributes of your normalizer class.
 
 The only **required** keys in a normalizer at this point are `size`, `service`, and `request_id`. Any other keys you establish can be used for formatting the resulting object filename.
 
-## Available Message
-
-Available Message:
-
-      {
-          "account": <account number>,
-          "request_id": <uuid for the payload>,
-          "principal": <currently the org ID>,
-          "service": <the service that validated the payload>,
-          "category": <a category for the payload>,
-          "url": <URL to download the file>,
-          "b64_identity": <the base64 encoded identity of the sender>,
-          "id": <host based inventory id if available>, **RELOCATING TO EXTRAS**
-          "satellite_managed": <boolean if the system is managed by satellite>, **RELOCATING TO EXTRAS**
-          "timestamp": <the time the available message was put on the topic>,
-          "validation": <success|failure>,
-          "size": <size in bytes of payload>,
-          "metadata": <metadata attached to the original upload>,
-          "extras": {
-              "satellite_managed": <same as above>
-              "id": <same as above>
-              ...
-          }
-      }
 
 ## Local Development
 
