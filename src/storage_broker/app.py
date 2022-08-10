@@ -121,7 +121,7 @@ def main(exit_event=event):
             logger.debug("Incoming Message Content: %s", decoded_msg)
             tracker_msg = TrackerMessage(decoded_msg)
             message = tracker_msg.message("received", "received message from {}".format(decoded_msg.get("service")))
-            send_message(config.TRACKER_TOPIC, message, request_id=msg.get("request_id"))
+            send_message(config.TRACKER_TOPIC, message, request_id=decoded_msg.get("request_id"))
         except Exception:
             logger.exception("Unable to decode message from topic: %s - %s", msg.topic(), msg.value())
             metrics.message_consume_error_count.inc()
