@@ -113,7 +113,7 @@ def main(exit_event=event):
             logger.error("Consumer error: %s", msg.error())
             continue
 
-        if msg.topic() != config.EGRESS_TOPIC and not service_check(msg):
+        if not service_check(msg):
             continue
 
         try:
@@ -130,11 +130,6 @@ def main(exit_event=event):
             if decoded_msg['type'] in ('updated', 'created'):
                 track_inventory_payload(decoded_msg)
             continue
-
-        tracker_msg = TrackerMessage(attr.asdict(decoded_msg))
-        send_message(TRACKER_TOPIC, tracker_msg.message("received",
-                                                        "received message for {}".format(tracker_msg.service)),
-                                                        request_id=tracker_msg.request_id)
 
         try:
             _map = bucket_map[msg.topic()]
