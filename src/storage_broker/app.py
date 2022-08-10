@@ -120,7 +120,7 @@ def main(exit_event=event):
             decoded_msg = json.loads(msg.value().decode("utf-8"))
             logger.debug("Incoming Message Content: %s", decoded_msg)
             tracker_msg = TrackerMessage(decoded_msg)
-            message = tracker_msg.message("received", f"received message from {decoded_msg.get("service")}")
+            message = tracker_msg.message("received", "received message from {}".format(decoded_msg.get("service")))
             send_message(config.TRACKER_TOPIC, message, request_id=msg.get("request_id"))
         except Exception:
             logger.exception("Unable to decode message from topic: %s - %s", msg.topic(), msg.value())
