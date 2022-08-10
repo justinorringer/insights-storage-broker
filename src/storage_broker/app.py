@@ -46,13 +46,13 @@ def service_check(msg):
     return False
 
 
-def handle_failure(data, tracker_msg):
+def handle_validation(data, tracker_msg):
     def track(m):
         send_message(config.TRACKER_TOPIC, m, request_id=data.request_id)
 
-    track(tracker_msg.message("received", "received validation response"))
+    track(tracker_msg.message("received", f"received validation response from {data.service}"))
     if data.validation == "success":
-        track(tracker_msg.message("success", "payload validation successful"))
+        track(tracker_msg.message("success", f"payload validation successful for {data.service} payload"))
         return
 
     if data.validation == "failure":
@@ -66,7 +66,7 @@ def handle_failure(data, tracker_msg):
         )
         track(
             tracker_msg.message(
-                "success", f"copied failed payload to {config.REJECT_BUCKET}"
+                "success", f"copied payload to {config.REJECT_BUCKET}"
             )
         )
         if data.reason:
@@ -78,7 +78,7 @@ def handle_failure(data, tracker_msg):
     logger.error(f"Invalid validation response: {data.validation}")
     metrics.invalid_validation_status.labels(service=data.service).inc()
     track(
-        tracker_msg.message("error", f"invalid validation response: {data.validation}")
+        tracker_msg.message("error", f"invalid validation response: {data.validation} from {data.service}")
     )
 
 
@@ -113,12 +113,15 @@ def main(exit_event=event):
             logger.error("Consumer error: %s", msg.error())
             continue
 
-        if msg.topic() != config.EGRESS_TOPIC and not service_check(msg):
+        if not service_check(msg):
             continue
 
         try:
             decoded_msg = json.loads(msg.value().decode("utf-8"))
             logger.debug("Incoming Message Content: %s", decoded_msg)
+            tracker_msg = TrackerMessage(decoded_msg)
+            message = tracker_msg.message("received", f"received message from {decoded_msg.get("service")}")
+            send_message(config.TRACKER_TOPIC, message, request_id=msg.get("request_id"))
         except Exception:
             logger.exception("Unable to decode message from topic: %s - %s", msg.topic(), msg.value())
             metrics.message_consume_error_count.inc()
@@ -126,24 +129,15 @@ def main(exit_event=event):
             continue
 
         metrics.message_consume_count.inc()
-        if msg.topic() == config.EGRESS_TOPIC:
-            if decoded_msg['type'] in ('updated', 'created'):
-                track_inventory_payload(decoded_msg)
-            continue
-
-        tracker_msg = TrackerMessage(attr.asdict(decoded_msg))
-        send_message(TRACKER_TOPIC, tracker_msg.message("received",
-                                                        "received message for {}".format(tracker_msg.service)),
-                                                        request_id=tracker_msg.request_id)
 
         try:
             _map = bucket_map[msg.topic()]
             data = normalize(_map, decoded_msg)
             tracker_msg = TrackerMessage(attr.asdict(data))
             if msg.topic() == config.VALIDATION_TOPIC:
-                handle_failure(data, tracker_msg)
+                handle_validation(data, tracker_msg)
             else:
-                key, bucket = handle_bucket(_map, data)
+                key, bucket = get_bucket(_map, data)
                 aws.copy(
                     data.request_id,
                     config.STAGE_BUCKET,
@@ -152,6 +146,8 @@ def main(exit_event=event):
                     data.size,
                     data.service,
                 )
+                message = tracker_msg.message("success", f"copied payload to {bucket} as {key}")
+                send_message(config.TRACKER_TOPIC, message, request_id=data.request_id)
         except Exception:
             metrics.message_json_unpack_error.labels(topic=msg.topic()).inc()
             logger.exception("An error occured during message processing")
@@ -171,7 +167,7 @@ def normalize(_map, decoded_msg):
     return data
 
 
-def handle_bucket(_map, data):
+def get_bucket(_map, data):
     try:
         formatter = _map["services"][data.service]["format"]
         key = formatter.format(**attr.asdict(data))
@@ -180,26 +176,6 @@ def handle_bucket(_map, data):
     except Exception:
         logger.exception("Unable to find bucket map for %s", data.service)
         raise
-
-
-# Sends inventory messages to the tracker topic
-def track_inventory_payload(msg):
-    logger.debug("Incoming Egress Message Content: %s", msg)
-    platform_metadata = msg.pop("platform_metadata")
-    msg["id"] = msg["host"].get("id")
-    if msg["host"].get("system_profile"):
-        del msg["host"]["system_profile"]
-    if platform_metadata is not None:
-        available_message = {**msg, **platform_metadata}
-    else:
-        available_message = msg
-
-    tracker_msg = TrackerMessage(available_message)
-    send_message(
-        config.TRACKER_TOPIC,
-        tracker_msg.message("success", f"message received from {config.EGRESS_TOPIC}"),
-        available_message.get("request_id"),
-    )
 
 
 def send_message(topic, msg, request_id=None, headers=None):
