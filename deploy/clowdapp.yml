@@ -69,6 +69,8 @@ objects:
             value: ${PERM_BUCKET}
           - name: REJECT_BUCKET
             value: ${REJECT_BUCKET}
+          - name: MONITORED_SERVICES
+            value: ${MONITORED_SERVICES}
           - name: HABERDASHER_EMITTER
             value: ${HABERDASHER_EMITTER}
           - name: HABERDASHER_KAFKA_BOOTSTRAP
@@ -193,6 +195,9 @@ parameters:
 - description: bucket config map location
   name: BUCKET_MAP_FILE
   value: "/var/config.yaml"
+- description: topics to monitor
+  name: MONITORED_SERVICES
+  value: "openshift,ansible"
 - description: policy based key
   name: POLICY_BASED_KEY
   value: "ingress-buckets-read-write"
