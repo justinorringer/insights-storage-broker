@@ -98,6 +98,7 @@ objects:
       - ${REJECT_BUCKET}
       - ${OPENSHIFT_BUCKET}
       - ${ANSIBLE_BUCKET}
+      - ${TOWER_BUCKET}
     kafkaTopics:
       - replicas: 3
         partitions: 24
@@ -134,6 +135,12 @@ objects:
           ansible:
             format: "{org_id}/{cluster_id}/{timestamp}-{request_id}"
             bucket: ${ANSIBLE_BUCKET}
+          tower:
+            format: "{request_id}"
+            bucket: ${TOWER_BUCKET}
+          pinakes:
+            format: "{request_id}"
+            bucket: ${TOWER_BUCKET}
   
 parameters:
 - description: Minimum number of replicas required
@@ -180,6 +187,9 @@ parameters:
 - description: ansible tower bucket
   name: ANSIBLE_BUCKET
   value: "insights-buck-it-ansible"
+- description: tower analytics bucket
+  name: TOWER_BUCKET
+  value: "insights-upload-tower-analytics"
 - description: bucket config map location
   name: BUCKET_MAP_FILE
   value: "/var/config.yaml"
