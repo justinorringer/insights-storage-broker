@@ -138,10 +138,10 @@ objects:
             format: "{org_id}/{cluster_id}/{timestamp}-{request_id}"
             bucket: ${ANSIBLE_BUCKET}
           tower:
-            format: "{request_id}"
+            format: "{org_id}/{request_id}"
             bucket: ${TOWER_BUCKET}
           pinakes:
-            format: "{request_id}"
+            format: "{org_id}/{request_id}"
             bucket: ${TOWER_BUCKET}
   
 parameters:
