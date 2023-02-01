@@ -8,6 +8,38 @@ BUCKET_MAP_FILE = os.getenv("BUCKET_MAP_FILE", "/opt/app-root/src/default_map.ya
 logger = logging.getLogger(APP_NAME)
 
 
+def kafka_config():
+    logger.debug("initializing kafka connection")
+
+    connection_info = {}
+
+    try:
+        if KAFKA_BROKER:
+           connection_info["bootstrap.servers"] = BOOTSTRAP_SERVERS
+
+           if KAFKA_BROKER.securityProtocol:
+               connection_info["security.protocol"] = KAFKA_BROKER.securityProtocol
+           elif KAFKA_BROKER.sasl and KAFKA_BROKER.sasl.securityProtocol:
+               connection_info["security.protocol"] = KAFKA_BROKER.sasl.securityProtocol
+           else:
+                connection_info["security.protocol"] = "plaintext"
+
+           if KAFKA_BROKER.cacert:
+               connection_info["ssl.ca.location"] = "/tmp/cacert.pem"
+           if KAFKA_BROKER.sasl and KAFKA_BROKER.sasl.username:
+               connection_info.update({
+                   "sasl.mechanisms": KAFKA_BROKER.sasl.saslMechanism,
+                   "sasl.username": KAFKA_BROKER.sasl.username,
+                   "sasl.password": KAFKA_BROKER.sasl.password
+               })
+        else:
+            connection_info["bootstrap.servers"] = ",".join(BOOTSTRAP_SERVERS)
+
+        return connection_info
+    except Exception as e:
+        logger.error("Failed to initialize consumer: %s", e)
+
+
 def log_config():
     import sys
 
@@ -91,7 +123,7 @@ else:
     INGRESS_TOPIC = os.getenv("INGRESS_TOPIC", "platform.upload.announce")
     NOTIFICATIONS_TOPIC = os.getenv("NOTIFICATIONS_TOPIC", "platform.notifications.ingress")
     TRACKER_TOPIC = os.getenv("TRACKER_TOPIC", "platform.payload-status")
-    BOOTSTRAP_SERVERS = os.getenv("BOOTSTRAP_SERVERS", "kafka:29092").split()
+    BOOTSTRAP_SERVERS = os.getenv("BOOTSTRAP_SERVERS", "kafka:29092").split(",")
     # S3
     AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", None)
     AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", None)
