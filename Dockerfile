@@ -2,7 +2,7 @@ FROM registry.redhat.io/ubi8/ubi-minimal
 
 WORKDIR /app-root/
 
-RUN microdnf install -y python36 python3-devel curl python3-pip
+RUN microdnf install -y python36 python3-devel git curl python3-pip
 
 COPY src src
 
