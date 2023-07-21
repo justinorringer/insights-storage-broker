@@ -39,7 +39,7 @@ pipeline {
                     sh './build_deploy.sh'
                 }
                 
-                // sh 'mkdir -p artifacts'
+                sh 'mkdir -p artifacts'
             }
         }
     }
@@ -52,6 +52,8 @@ pipeline {
                     source ./.cicd_bootstrap.sh
 
                     source "${CICD_ROOT}/post_test_results.sh"
+                    source "${CICD_ROOT}/build.sh"
+                    source "${CICD_ROOT}/deploy_ephemeral_env.sh"
                 '''
             }
         }
