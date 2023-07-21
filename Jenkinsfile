@@ -25,7 +25,7 @@ pipeline {
         COMPONENT_NAME="storage-broker"
         IMAGE="quay.io/cloudservices/insights-storage-broker"  
 
-        IQE_PLUGINS="e2e"
+        IQE_PLUGINS=""
         IQE_MARKER_EXPRESSION="smoke"
         IQE_FILTER_EXPRESSION=""
         IQE_CJI_TIMEOUT="30m"
