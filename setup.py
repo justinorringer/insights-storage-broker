@@ -9,12 +9,12 @@ setup(
     install_requires=[
         "prometheus-client==0.7.1",
         "logstash-formatter==0.5.17",
-        "boto3==1.12.38",
-        "watchtower==0.7.3",
-        "confluent-kafka==1.5.0",
-        "pyyaml==5.4.1",
+        "boto3==1.28.21",
+        "watchtower==3.0.1",
+        "confluent-kafka==2.2.0",
+        "pyyaml==6.0.1",
         "attrs==18.2.0",
-        "app-common-python==0.1.4"
+        "app-common-python==0.2.3"
     ],
     extras_require={"test": ["pytest>=5.4.1", "flake8>=3.7.9"]},
     entry_points={"console_scripts": ["storage_broker = storage_broker.app:main"]},
