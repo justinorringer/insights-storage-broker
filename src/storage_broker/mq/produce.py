@@ -3,27 +3,16 @@ import logging
 
 from confluent_kafka import Producer
 from src.storage_broker.utils import config, metrics
+from src.storage_broker.mq import common
 
 logger = logging.getLogger(__name__)
 
 
 def init_producer():
-    connection_info = {}
 
-    if config.KAFKA_BROKER:
-        connection_info["bootstrap.servers"] = config.BOOTSTRAP_SERVERS
-        if config.KAFKA_BROKER.cacert:
-            connection_info["ssl.ca.location"] = "/tmp/cacert.pem"
-        if config.KAFKA_BROKER.sasl and config.KAFKA_BROKER.sasl.username:
-            connection_info.update({
-                "security.protocol": config.KAFKA_BROKER.sasl.securityProtocol,
-                "sasl.mechanisms": config.KAFKA_BROKER.sasl.saslMechanism,
-                "sasl.username": config.KAFKA_BROKER.sasl.username,
-                "sasl.password": config.KAFKA_BROKER.sasl.password
-            })
-        return Producer(connection_info)
-    else:
-        return Producer({"bootstrap.servers": ",".join(config.BOOTSTRAP_SERVERS)})
+   connection_info = common.build_confluent_kafka_config(config)
+
+   return Producer(connection_info)
 
 
 def delivery_report(err, msg=None, request_id=None):
